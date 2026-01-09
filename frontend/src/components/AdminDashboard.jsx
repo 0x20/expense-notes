@@ -15,6 +15,11 @@ const AdminDashboard = ({ onLogout }) => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportStatuses, setExportStatuses] = useState({
+    pending: false,
+    paid: true,
+    denied: false
+  });
 
   useEffect(() => {
     loadExpenses();
@@ -81,10 +86,13 @@ const AdminDashboard = ({ onLogout }) => {
       return;
     }
 
-    // Filter expenses by date range
+    // Filter expenses by date range and status
+    const selectedStatuses = Object.keys(exportStatuses).filter(status => exportStatuses[status]);
     const filteredExpenses = expenses.filter(expense => {
       const expenseDate = new Date(expense.date_entered);
-      return expenseDate >= startDate && expenseDate <= endDate;
+      const inDateRange = expenseDate >= startDate && expenseDate <= endDate;
+      const matchesStatus = selectedStatuses.includes(expense.status);
+      return inDateRange && matchesStatus;
     });
 
     console.log('Filtered expenses:', filteredExpenses.length);
@@ -319,6 +327,38 @@ const AdminDashboard = ({ onLogout }) => {
                 />
               </div>
             </div>
+            <div style={styles.statusFilterSection}>
+              <label style={styles.statusFilterLabel}>Include Statuses:</label>
+              <div style={styles.checkboxGroup}>
+                <label style={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={exportStatuses.pending}
+                    onChange={(e) => setExportStatuses({...exportStatuses, pending: e.target.checked})}
+                    style={styles.checkbox}
+                  />
+                  <span style={styles.checkboxText}>Pending</span>
+                </label>
+                <label style={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={exportStatuses.paid}
+                    onChange={(e) => setExportStatuses({...exportStatuses, paid: e.target.checked})}
+                    style={styles.checkbox}
+                  />
+                  <span style={styles.checkboxText}>Paid</span>
+                </label>
+                <label style={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={exportStatuses.denied}
+                    onChange={(e) => setExportStatuses({...exportStatuses, denied: e.target.checked})}
+                    style={styles.checkbox}
+                  />
+                  <span style={styles.checkboxText}>Denied</span>
+                </label>
+              </div>
+            </div>
             <div style={styles.exportActions}>
               <button type="button" onClick={handleExportPDF} style={styles.exportConfirmButton}>
                 Generate PDF
@@ -504,6 +544,36 @@ const styles = {
     cursor: 'pointer',
     fontWeight: '600',
     border: 'none',
+  },
+  statusFilterSection: {
+    marginBottom: '1.5rem',
+  },
+  statusFilterLabel: {
+    fontSize: '0.875rem',
+    fontWeight: '500',
+    color: 'rgb(243, 244, 246)',
+    marginBottom: '0.75rem',
+    display: 'block',
+  },
+  checkboxGroup: {
+    display: 'flex',
+    gap: '1rem',
+    flexWrap: 'wrap',
+  },
+  checkboxLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    cursor: 'pointer',
+    color: 'rgb(243, 244, 246)',
+  },
+  checkbox: {
+    width: '16px',
+    height: '16px',
+    cursor: 'pointer',
+  },
+  checkboxText: {
+    fontSize: '0.875rem',
   },
 };
 
