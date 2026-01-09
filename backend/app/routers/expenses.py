@@ -1,0 +1,82 @@
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from sqlalchemy.orm import Session
+from typing import Optional, List
+from decimal import Decimal
+import aiofiles
+import os
+from datetime import datetime
+
+from ..database import get_db
+from ..schemas import ExpenseNoteCreate, ExpenseNoteResponse
+from ..crud import create_expense_note, update_expense_file_paths, get_expense_note as get_expense
+from ..email_service import EmailService
+from ..config import settings
+
+router = APIRouter(prefix="/api/expenses", tags=["expenses"])
+
+async def save_upload_file(upload_file: UploadFile, subfolder: str) -> str:
+    """Save uploaded file and return relative path"""
+    file_extension = upload_file.filename.split(".")[-1].lower()
+    if file_extension not in settings.ALLOWED_EXTENSIONS.split(","):
+        raise HTTPException(status_code=400, detail="Invalid file type")
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{timestamp}_{upload_file.filename}"
+    file_path = os.path.join(settings.UPLOAD_DIR, subfolder, filename)
+
+    async with aiofiles.open(file_path, 'wb') as out_file:
+        content = await upload_file.read()
+        if len(content) > settings.MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="File too large")
+        await out_file.write(content)
+
+    return f"{subfolder}/{filename}"
+
+@router.post("/", response_model=ExpenseNoteResponse)
+async def submit_expense_note(
+    member_name: str = Form(...),
+    description: str = Form(...),
+    amount: Decimal = Form(...),
+    member_email: str = Form(...),
+    photos: List[UploadFile] = File(None),
+    db: Session = Depends(get_db)
+):
+    """Submit a new expense note"""
+    expense_data = ExpenseNoteCreate(
+        member_name=member_name,
+        description=description,
+        amount=amount,
+        member_email=member_email,
+        date_entered=datetime.utcnow()
+    )
+
+    expense = create_expense_note(db, expense_data)
+
+    # Handle multiple photo uploads
+    if photos:
+        photo_paths_list = []
+        for photo in photos:
+            if photo.filename:  # Check if file was actually uploaded
+                photo_path = await save_upload_file(photo, "photos")
+                photo_paths_list.append(photo_path)
+
+        if photo_paths_list:
+            photo_paths = ",".join(photo_paths_list)
+            expense = update_expense_file_paths(
+                db, expense.id, photo_paths=photo_paths
+            )
+
+    # Send notification email to admin
+    await EmailService.send_new_expense_notification(
+        expense.id, member_name, float(amount)
+    )
+
+    return expense
+
+@router.get("/{expense_id}", response_model=ExpenseNoteResponse)
+async def get_expense_note(expense_id: str, db: Session = Depends(get_db)):
+    """Get a specific expense note (for user confirmation)"""
+    expense = get_expense(db, expense_id)
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    return expense
