@@ -17,15 +17,13 @@ api.interceptors.request.use((config) => {
 
 // Public API
 export const expenseAPI = {
-  submitExpense: async (formData) => {
-    const response = await api.post('/api/expenses/', formData, {
+  submitExpense: async (formData, accessToken) => {
+    const url = accessToken
+      ? `/api/expenses/?access=${encodeURIComponent(accessToken)}`
+      : '/api/expenses/';
+    const response = await api.post(url, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
-    return response.data;
-  },
-
-  getExpense: async (expenseId) => {
-    const response = await api.get(`/api/expenses/${expenseId}`);
     return response.data;
   }
 };

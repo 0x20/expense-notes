@@ -40,6 +40,26 @@ services:
     depends_on:
       - backend
 
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    container_name: expense-notes-bot
+    restart: unless-stopped
+    env_file:
+      - ./bot/.env
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.expense-bot.rule=Host(`expenses.hackerspace.gent`) && PathPrefix(`/bot`)
+      - traefik.http.routers.expense-bot.entrypoints=public
+      - traefik.http.routers.expense-bot.tls=true
+      - traefik.http.routers.expense-bot.tls.certresolver=letsencrypt
+      - traefik.http.services.expense-bot.loadbalancer.server.port=5000
+      - traefik.http.middlewares.expense-bot-stripprefix.stripprefix.prefixes=/bot
+      - traefik.http.routers.expense-bot.middlewares=expense-bot-stripprefix
+    networks:
+      - default
+
 networks:
   default:
     external: true

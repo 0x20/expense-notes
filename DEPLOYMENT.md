@@ -39,7 +39,47 @@ Edit `backend/.env` and update:
 - `SMTP_PASSWORD`: Your email password
 - `FRONTEND_URL`: Your production domain
 
-### 4. Create Admin User
+### 4. Generate Ed25519 Keypair for Access Tokens
+
+The system uses Ed25519 signed tokens to secure the public expense submission form.
+
+```bash
+cd bot
+python3 token_generator.py
+```
+
+This outputs:
+- **Private key** - Add to `bot/.env` as `ACCESS_TOKEN_PRIVATE_KEY`
+- **Public key** - Add to `backend/.env` as `ACCESS_TOKEN_PUBLIC_KEY`
+
+### 5. Configure Mattermost Bot
+
+Create `bot/.env`:
+
+```bash
+cp bot/.env.example bot/.env
+```
+
+Edit `bot/.env` and set:
+- `MATTERMOST_URL`: Your Mattermost server URL
+- `MATTERMOST_TOKEN`: Bot token (create bot account in Mattermost first)
+- `BOT_USERNAME`: `expense-bot` (or your chosen name)
+- `ACCESS_TOKEN_PRIVATE_KEY`: Private key from step 4
+- `EXPENSE_URL`: Your production domain
+
+**Create bot account in Mattermost:**
+1. System Console → Integrations → Bot Accounts → Add Bot Account
+2. Username: `expense-bot`
+3. Copy the generated token to `bot/.env`
+
+**Create outgoing webhook:**
+1. Integrations → Outgoing Webhooks → Add Outgoing Webhook
+2. Trigger Words: `!expenses`, `!help`
+3. Callback URL: `https://expenses.hackerspace.gent/bot/webhook`
+
+See `bot/README.md` for detailed setup instructions.
+
+### 6. Create Admin User
 
 Before first deployment, you need to create the admin user. You can either:
 
@@ -58,7 +98,7 @@ python setup.py  # Follow prompts to set admin password
 docker exec -it expense-notes-backend python setup.py
 ```
 
-### 5. Deploy
+### 7. Deploy
 
 Build and start the containers:
 
@@ -78,6 +118,46 @@ docker compose logs -f
 Visit your domain:
 - Frontend: `https://expenses.hackerspace.gent`
 - Backend API docs: `https://expenses.hackerspace.gent/docs`
+- Bot webhook: `https://expenses.hackerspace.gent/bot/webhook`
+
+**Test the bot:**
+In Mattermost, send `!expenses` to get an access link.
+
+## Security Features
+
+The system includes multiple security layers:
+
+### 1. Token-Based Access Control
+- Public expense form requires a signed Ed25519 token
+- Tokens valid for 7 days from generation
+- Distributed via Mattermost bot (prevents public spam/DDoS)
+- In development mode (`ACCESS_TOKEN_REQUIRED=false`), tokens are optional
+
+### 2. Rate Limiting
+- Expense submissions: 10 per minute per IP
+- Admin login: 5 attempts per minute per IP
+- Prevents brute force attacks and spam
+
+### 3. Removed Public Endpoints
+- ~~`GET /api/expenses/{id}`~~ - Removed (was information disclosure risk)
+- ~~`/uploads/` public mount~~ - Removed (files now admin-only)
+- File access requires admin authentication
+
+### 4. Security Headers
+- `X-Content-Type-Options: nosniff` - Prevents MIME sniffing
+- `X-Frame-Options: DENY` - Prevents clickjacking
+- `X-XSS-Protection: 1; mode=block` - XSS protection
+
+### 5. Restricted CORS
+- Only allows specific HTTP methods (GET, POST, PATCH, DELETE)
+- Only allows necessary headers (Content-Type, Authorization)
+- Configured for production domain only
+
+### 6. Input Validation
+- File type verification (jpg, jpeg, png, pdf only)
+- File size limits (10MB default)
+- Email validation
+- Amount validation (positive numbers only)
 
 ## File Structure
 

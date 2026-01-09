@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { expenseAPI } from '../services/api';
 
-const ExpenseForm = () => {
+const ExpenseForm = ({ accessToken }) => {
   const [formData, setFormData] = useState({
     member_name: '',
     description: '',
@@ -12,6 +12,9 @@ const ExpenseForm = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
+
+  // Check if we need an access token (production mode)
+  const isDevelopment = import.meta.env.DEV;
 
   const handleInputChange = (e) => {
     setFormData({
@@ -45,7 +48,7 @@ const ExpenseForm = () => {
         });
       }
 
-      await expenseAPI.submitExpense(submitData);
+      await expenseAPI.submitExpense(submitData, accessToken);
 
       setSuccess(true);
       // Reset form
@@ -62,6 +65,21 @@ const ExpenseForm = () => {
       setLoading(false);
     }
   };
+
+  // Show access required message if no token in production
+  if (!isDevelopment && !accessToken) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <h1 style={styles.title}>Access Required</h1>
+          <div style={styles.errorMessage}>
+            You need a valid access link to submit an expense.
+            Please contact your admin or use the Mattermost bot to get an access link.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>

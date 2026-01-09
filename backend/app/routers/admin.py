@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -16,11 +16,15 @@ from ..crud import (
 from ..auth import authenticate_admin, create_access_token, get_current_admin
 from ..email_service import EmailService
 from ..config import settings
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+limiter = Limiter(key_func=get_remote_address)
 
 @router.post("/login", response_model=Token)
-async def admin_login(login_data: AdminLogin, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+async def admin_login(request: Request, login_data: AdminLogin, db: Session = Depends(get_db)):
     """Admin login endpoint"""
     if not authenticate_admin(db, login_data.password):
         raise HTTPException(status_code=401, detail="Invalid password")

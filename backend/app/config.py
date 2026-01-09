@@ -21,6 +21,10 @@ class Settings(BaseSettings):
 
     FRONTEND_URL: str = "http://localhost:3000"
 
+    # Public access token verification (Ed25519)
+    ACCESS_TOKEN_PUBLIC_KEY: Optional[str] = None  # Base64-encoded Ed25519 public key
+    ACCESS_TOKEN_REQUIRED: bool = False  # Set True in production
+
     class Config:
         env_file = ".env"
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Request
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from decimal import Decimal
@@ -11,8 +11,30 @@ from ..schemas import ExpenseNoteCreate, ExpenseNoteResponse
 from ..crud import create_expense_note, update_expense_file_paths, get_expense_note as get_expense
 from ..email_service import EmailService
 from ..config import settings
+from ..token_verification import verify_access_token
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/api/expenses", tags=["expenses"])
+limiter = Limiter(key_func=get_remote_address)
+
+
+async def verify_public_access(access: Optional[str] = Query(None)) -> Optional[dict]:
+    """Verify access token for public endpoints"""
+    if not settings.ACCESS_TOKEN_REQUIRED:
+        return None  # Skip verification in dev mode
+
+    if not access:
+        raise HTTPException(status_code=401, detail="Access token required")
+
+    if not settings.ACCESS_TOKEN_PUBLIC_KEY:
+        raise HTTPException(status_code=500, detail="Server not configured for token verification")
+
+    payload = verify_access_token(access, settings.ACCESS_TOKEN_PUBLIC_KEY)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired access token")
+
+    return payload
 
 async def save_upload_file(upload_file: UploadFile, subfolder: str) -> str:
     """Save uploaded file and return relative path"""
@@ -33,15 +55,18 @@ async def save_upload_file(upload_file: UploadFile, subfolder: str) -> str:
     return f"{subfolder}/{filename}"
 
 @router.post("/", response_model=ExpenseNoteResponse)
+@limiter.limit("10/minute")
 async def submit_expense_note(
+    request: Request,
     member_name: str = Form(...),
     description: str = Form(...),
     amount: Decimal = Form(...),
     member_email: str = Form(...),
     photos: List[UploadFile] = File(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    token_payload: Optional[dict] = Depends(verify_public_access)
 ):
-    """Submit a new expense note"""
+    """Submit a new expense note (requires access token in production)"""
     expense_data = ExpenseNoteCreate(
         member_name=member_name,
         description=description,
@@ -73,10 +98,5 @@ async def submit_expense_note(
 
     return expense
 
-@router.get("/{expense_id}", response_model=ExpenseNoteResponse)
-async def get_expense_note(expense_id: str, db: Session = Depends(get_db)):
-    """Get a specific expense note (for user confirmation)"""
-    expense = get_expense(db, expense_id)
-    if not expense:
-        raise HTTPException(status_code=404, detail="Expense not found")
-    return expense
+# NOTE: Public GET endpoint removed for security
+# Expense data now only accessible through admin-authenticated endpoints
