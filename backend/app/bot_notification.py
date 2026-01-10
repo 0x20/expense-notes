@@ -77,3 +77,22 @@ Your expense for **€{amount:.2f}** has been **{status_text}**.
 Use `/expenses` to submit a new expense."""
 
     return await notify_user_via_bot(username, message)
+
+
+async def notify_expense_submitted(
+    username: str,
+    amount: float,
+    description: str
+) -> bool:
+    """
+    Notify user that their expense was submitted.
+    """
+    message = f""":inbox_tray: **Expense Submitted**
+
+Your expense for **€{amount:.2f}** has been submitted and is pending review.
+
+> {description[:100]}{"..." if len(description) > 100 else ""}
+
+You'll receive a DM when it's processed."""
+
+    return await notify_user_via_bot(username, message)

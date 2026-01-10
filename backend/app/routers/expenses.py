@@ -10,6 +10,7 @@ from ..database import get_db
 from ..schemas import ExpenseNoteCreate, ExpenseNoteResponse
 from ..crud import create_expense_note, update_expense_file_paths, get_expense_note as get_expense
 from ..email_service import EmailService
+from ..bot_notification import notify_expense_submitted
 from ..config import settings
 from ..token_verification import verify_access_token
 from slowapi import Limiter
@@ -106,6 +107,14 @@ async def submit_expense_note(
     await EmailService.send_new_expense_notification(
         expense.id, display_name, float(amount)
     )
+
+    # Send DM confirmation to user
+    if expense.mattermost_username:
+        await notify_expense_submitted(
+            expense.mattermost_username,
+            float(amount),
+            description
+        )
 
     return expense
 
