@@ -1,6 +1,6 @@
 import os
 import logging
-from ..services.tokens import generate_access_token
+from services.tokens import generate_access_token
 
 logger = logging.getLogger(__name__)
 
