@@ -124,6 +124,9 @@ async def submit_expense_note(
                     db, expense.id, photo_paths=photo_paths
                 )
 
+        # Build view URL for submitter
+        view_url = f"{settings.FRONTEND_URL}/view/{expense.view_token}"
+
         # Send notification email to admin
         display_name = member_name or expense.mattermost_username or "Unknown"
         try:
@@ -139,7 +142,8 @@ async def submit_expense_note(
                 result = await notify_expense_submitted(
                     expense.mattermost_username,
                     float(amount),
-                    description
+                    description,
+                    view_url
                 )
                 if not result:
                     logger.warning(f"DM notification failed for {expense.mattermost_username}")
@@ -152,5 +156,31 @@ async def submit_expense_note(
         logger.error(f"Failed to submit expense: {e}")
         raise
 
-# NOTE: Public GET endpoint removed for security
-# Expense data now only accessible through admin-authenticated endpoints
+@router.get("/view/{view_token}")
+async def view_expense_by_token(
+    view_token: str,
+    db: Session = Depends(get_db)
+):
+    """View expense details by secret view token (for submitters)"""
+    from ..models import ExpenseNote
+
+    expense = db.query(ExpenseNote).filter(
+        ExpenseNote.view_token == view_token,
+        ExpenseNote.deleted == False
+    ).first()
+
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+
+    # Return limited public-safe fields
+    return {
+        "id": expense.id,
+        "status": expense.status,
+        "member_name": expense.member_name,
+        "description": expense.description,
+        "amount": float(expense.amount),
+        "date_entered": expense.date_entered.isoformat() if expense.date_entered else None,
+        "payment_method": expense.payment_method,
+        "created_at": expense.created_at.isoformat() if expense.created_at else None,
+        "pay_date": expense.pay_date.isoformat() if expense.pay_date else None,
+    }

@@ -2,13 +2,18 @@ from sqlalchemy import Column, String, DateTime, Boolean, Numeric, Text
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 import uuid
+import secrets
 
 Base = declarative_base()
+
+def generate_view_token():
+    return secrets.token_urlsafe(32)
 
 class ExpenseNote(Base):
     __tablename__ = "expense_notes"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    view_token = Column(String(64), unique=True, default=generate_view_token, nullable=False)
     status = Column(String(20), default="pending", nullable=False)
 
     # User-submitted fields

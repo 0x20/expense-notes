@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import ExpenseForm from './components/ExpenseForm';
+import ExpenseView from './components/ExpenseView';
 import AdminLogin from './components/AdminLogin';
 import AdminDashboard from './components/AdminDashboard';
 
@@ -59,6 +60,7 @@ function AppContent() {
   return (
     <Routes>
       <Route path="/" element={<ExpenseForm accessToken={accessToken} mattermostUsername={mattermostUsername} />} />
+      <Route path="/view/:token" element={<ExpenseView />} />
       <Route
         path="/admin"
         element={

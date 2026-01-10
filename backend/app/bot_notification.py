@@ -79,16 +79,19 @@ Use `/expenses` to submit a new expense."""
 async def notify_expense_submitted(
     username: str,
     amount: float,
-    description: str
+    description: str,
+    view_url: str = None
 ) -> bool:
     """
     Notify user that their expense was submitted.
     """
+    view_line = f"\n\n:link: [View your expense]({view_url})" if view_url else ""
+
     message = f""":inbox_tray: **Expense Submitted**
 
 Your expense for **€{amount:.2f}** has been submitted and is pending review.
 
-> {description[:100]}{"..." if len(description) > 100 else ""}
+> {description[:100]}{"..." if len(description) > 100 else ""}{view_line}
 
 You'll receive a DM when it's processed."""
 
