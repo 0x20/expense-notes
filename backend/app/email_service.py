@@ -46,9 +46,10 @@ class EmailService:
     @staticmethod
     async def send_new_expense_notification(expense_id: str, member_name: str, amount: float):
         if not settings.ADMIN_EMAIL:
-            print(f"Admin email not configured. Would notify about expense {expense_id}")
+            logger.warning(f"Admin email not configured. Would notify about expense {expense_id}")
             return
 
+        admin_url = settings.FRONTEND_URL.rstrip('/') + '/admin/dashboard'
         subject = f"New Expense Submission: {member_name}"
         html_content = f"""
         <html>
@@ -57,7 +58,9 @@ class EmailService:
                 <p><strong>Member:</strong> {member_name}</p>
                 <p><strong>Amount:</strong> €{amount:.2f}</p>
                 <p><strong>Expense ID:</strong> {expense_id}</p>
-                <p>Please review this expense in the admin dashboard.</p>
+                <p style="margin-top: 20px;">
+                    <a href="{admin_url}" style="display: inline-block; padding: 12px 24px; background-color: rgb(255, 173, 179); color: #111827; text-decoration: none; border-radius: 6px; font-weight: bold;">Review in Admin Dashboard</a>
+                </p>
             </body>
         </html>
         """
