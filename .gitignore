@@ -18,9 +18,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Environment
+# Environment (secrets - never commit)
 .env
 .env.local
+.env.prod
 .env.*.local
 
 # Database

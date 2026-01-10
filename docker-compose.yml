@@ -6,7 +6,7 @@ services:
     container_name: expense-notes-backend
     restart: unless-stopped
     env_file:
-      - ./backend/.env
+      - ./backend/.env.prod
     volumes:
       - ./backend/data:/app/data
       - ./backend/uploads:/app/uploads
@@ -48,7 +48,7 @@ services:
     container_name: hsg-bot
     restart: unless-stopped
     env_file:
-      - ./hsg-bot/.env
+      - ./hsg-bot/.env.prod
     dns:
       - 8.8.8.8
       - 1.1.1.1
