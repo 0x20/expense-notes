@@ -13,6 +13,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.expense-backend.rule=Host(`expenses.hackerspace.gent`) && PathPrefix(`/api`, `/uploads`, `/docs`, `/openapi.json`)
+      - traefik.http.routers.expense-backend.priority=100
       - traefik.http.routers.expense-backend.entrypoints=public
       - traefik.http.routers.expense-backend.tls=true
       - traefik.http.routers.expense-backend.tls.certresolver=letsencrypt
