@@ -150,7 +150,7 @@ const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete
                   style={styles.downloadButton}
                   title="Download"
                 >
-                  ↓
+                  📥
                 </button>
               )}
               {editable && hoveredIndex === index && (
