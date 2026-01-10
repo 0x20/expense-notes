@@ -49,6 +49,9 @@ services:
     restart: unless-stopped
     env_file:
       - ./hsg-bot/.env
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     labels:
       - traefik.enable=true
       - traefik.http.routers.hsg-bot.rule=Host(`expenses.hackerspace.gent`) && PathPrefix(`/bot`)
