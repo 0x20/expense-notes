@@ -76,7 +76,7 @@ def get_dm_channel(user_id: str) -> str:
         return None
 
     try:
-        channel = driver.channels.create_direct_channel([bot_id, user_id])
+        channel = driver.channels.create_direct_message_channel([bot_id, user_id])
         return channel['id']
     except Exception as e:
         logger.error(f"Failed to create DM channel for user {user_id}: {e}")
