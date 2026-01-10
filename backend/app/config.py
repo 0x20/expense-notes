@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings
+from pydantic import model_validator
 from typing import Optional
+import sys
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./data/expense_notes.db"
@@ -22,13 +24,28 @@ class Settings(BaseSettings):
 
     FRONTEND_URL: str = "http://localhost:3000"
 
-    # Public access token verification (Ed25519)
-    ACCESS_TOKEN_PUBLIC_KEY: Optional[str] = None  # Base64-encoded Ed25519 public key
-    ACCESS_TOKEN_REQUIRED: bool = False  # Set True in production
+    # Public access token verification (Ed25519) - REQUIRED
+    ACCESS_TOKEN_PUBLIC_KEY: str  # Base64-encoded Ed25519 public key
+    ACCESS_TOKEN_REQUIRED: bool = True  # Default to secure
 
-    # Bot notification settings
-    BOT_NOTIFY_URL: Optional[str] = None  # e.g., http://bot:5000/notify
-    BOT_NOTIFY_SECRET: Optional[str] = None  # Shared secret with bot
+    # Bot notification settings - REQUIRED for DMs
+    BOT_NOTIFY_URL: str  # e.g., http://hsg-bot:5000/notify
+    BOT_NOTIFY_SECRET: str  # Shared secret with bot
+
+    @model_validator(mode='after')
+    def validate_required_settings(self):
+        missing = []
+        if not self.ACCESS_TOKEN_PUBLIC_KEY:
+            missing.append('ACCESS_TOKEN_PUBLIC_KEY')
+        if not self.BOT_NOTIFY_URL:
+            missing.append('BOT_NOTIFY_URL')
+        if not self.BOT_NOTIFY_SECRET:
+            missing.append('BOT_NOTIFY_SECRET')
+        if missing:
+            print(f"FATAL: Missing required environment variables: {', '.join(missing)}", file=sys.stderr)
+            print("Add these to backend/.env", file=sys.stderr)
+            sys.exit(1)
+        return self
 
     class Config:
         env_file = ".env"
