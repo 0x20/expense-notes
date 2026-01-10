@@ -182,9 +182,13 @@ The system includes multiple security layers:
 expense-notes/
 ├── backend/
 │   ├── data/              # SQLite database (persisted)
-│   └── uploads/           # Uploaded files (persisted)
+│   ├── uploads/           # Uploaded files (persisted)
+│   └── migrate.py         # Database migrations
 ├── frontend/
-│   └── dist/             # Built static files (in container)
+│   └── dist/              # Built static files (in container)
+├── hsg-bot/
+│   ├── commands/          # Slash command handlers
+│   └── services/          # Mattermost API, token generation
 └── docker-compose.yml
 ```
 
@@ -204,6 +208,7 @@ The following directories are persisted on the host:
 ```bash
 git pull
 docker compose up -d --build
+docker exec -it expense-notes-backend python migrate.py  # Apply any schema changes
 ```
 
 ### Update Dependencies Only
@@ -247,7 +252,19 @@ docker exec -it expense-notes-backend python setup.py
 ### Access Database
 
 ```bash
-docker exec -it expense-notes-backend sqlite3 data/expense_notes.db
+# From host (if sqlite3 installed)
+sqlite3 backend/data/expense_notes.db
+
+# Or copy to host first
+docker cp expense-notes-backend:/app/data/expense_notes.db ./expense_notes.db
+sqlite3 ./expense_notes.db
+```
+
+### Run Migrations
+
+After deploying schema changes, run:
+```bash
+docker exec -it expense-notes-backend python migrate.py
 ```
 
 ## Troubleshooting

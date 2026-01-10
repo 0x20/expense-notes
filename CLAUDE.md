@@ -48,6 +48,17 @@ python -c "from app.database import init_db; init_db()"
 python setup.py  # Recreate admin
 ```
 
+### Database Migrations
+Schema changes require running migrations after deployment:
+```bash
+# Locally
+cd backend && python migrate.py
+
+# In Docker
+docker exec -it expense-notes-backend python migrate.py
+```
+Add new migrations to `backend/migrate.py`. The script is idempotent (safe to run multiple times).
+
 ## Architecture
 
 ### Key Design Patterns
@@ -63,11 +74,18 @@ python setup.py  # Recreate admin
 ### Data Model
 
 **ExpenseNote** (main entity):
-- User fields: `member_name`, `member_email`, `description`, `amount`, `date_entered`, `photo_paths`, `signature_path`
+- User fields: `member_name`, `member_email`, `description`, `amount`, `date_entered`, `photo_paths`, `signature_path`, `mattermost_username`
 - Admin fields: `status`, `pay_date`, `paid_from`, `paid_to`, `financial_responsible`, `admin_notes`, `attachment_paths`
 - System fields: `id` (UUID), `created_at`, `updated_at`, `deleted`
 
 **Deprecated fields still in models.py**: `paid`, `expense_type`, `signature_financial_path` (no longer used in UI/API but exist in schema)
+
+### HSG Bot (hsg-bot/)
+
+Mattermost bot for secure expense link generation and notifications:
+- `/expenses` slash command returns ephemeral link with signed Ed25519 token
+- Backend calls `/notify` endpoint to DM users on status changes
+- Modular structure: `commands/` for handlers, `services/` for Mattermost API and token generation
 
 ### Frontend Architecture
 
