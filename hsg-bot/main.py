@@ -8,7 +8,11 @@ from pydantic import BaseModel
 from commands.expenses import handle_expenses, notify_status_change
 from services.mattermost import send_dm_to_username
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s:%(name)s:%(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 
 # Config
