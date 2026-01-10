@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: Optional[str] = None
     SMTP_FROM_NAME: str = "Expense Notes System"
     ADMIN_EMAIL: Optional[str] = None
+    ADMIN_PASSWORD: Optional[str] = None  # Initial admin password (used on first startup)
 
     MAX_FILE_SIZE: int = 10485760  # 10MB
     UPLOAD_DIR: str = "./uploads"
