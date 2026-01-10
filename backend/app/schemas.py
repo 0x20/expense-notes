@@ -31,7 +31,7 @@ class ExpenseNoteUpdate(BaseModel):
 class ExpenseNoteResponse(BaseModel):
     id: str
     status: str
-    member_name: str
+    member_name: Optional[str]
     date_entered: datetime
     description: str
     amount: Decimal
