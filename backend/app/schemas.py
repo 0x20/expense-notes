@@ -4,11 +4,13 @@ from typing import Optional
 from decimal import Decimal
 
 class ExpenseNoteCreate(BaseModel):
-    member_name: str
+    member_name: Optional[str] = None  # Required for IBAN, optional for cash
     description: str
     amount: Decimal
     member_email: EmailStr
     date_entered: Optional[datetime] = None
+    payment_method: Optional[str] = 'iban'
+    iban: Optional[str] = None
 
     @field_validator('amount')
     @classmethod
@@ -45,6 +47,8 @@ class ExpenseNoteResponse(BaseModel):
     admin_notes: Optional[str]
     deleted: bool
     mattermost_username: Optional[str]
+    payment_method: Optional[str]
+    iban: Optional[str]
 
     class Config:
         from_attributes = True

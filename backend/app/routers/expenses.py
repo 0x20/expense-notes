@@ -58,10 +58,12 @@ async def save_upload_file(upload_file: UploadFile, subfolder: str) -> str:
 @limiter.limit("10/minute")
 async def submit_expense_note(
     request: Request,
-    member_name: str = Form(...),
     description: str = Form(...),
     amount: Decimal = Form(...),
     member_email: str = Form(...),
+    member_name: Optional[str] = Form(None),
+    payment_method: Optional[str] = Form('iban'),
+    iban: Optional[str] = Form(None),
     photos: List[UploadFile] = File(None),
     db: Session = Depends(get_db),
     token_payload: Optional[dict] = Depends(verify_public_access)
@@ -72,6 +74,8 @@ async def submit_expense_note(
         description=description,
         amount=amount,
         member_email=member_email,
+        payment_method=payment_method,
+        iban=iban,
         date_entered=datetime.utcnow()
     )
 
@@ -98,8 +102,9 @@ async def submit_expense_note(
             )
 
     # Send notification email to admin
+    display_name = member_name or expense.mattermost_username or "Unknown"
     await EmailService.send_new_expense_notification(
-        expense.id, member_name, float(amount)
+        expense.id, display_name, float(amount)
     )
 
     return expense

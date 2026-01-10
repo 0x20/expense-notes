@@ -6,7 +6,9 @@ const ExpenseForm = ({ accessToken }) => {
     member_name: '',
     description: '',
     amount: '',
-    member_email: ''
+    member_email: '',
+    payment_method: 'iban',
+    iban: ''
   });
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -40,6 +42,10 @@ const ExpenseForm = ({ accessToken }) => {
       submitData.append('description', formData.description);
       submitData.append('amount', formData.amount);
       submitData.append('member_email', formData.member_email);
+      submitData.append('payment_method', formData.payment_method);
+      if (formData.payment_method === 'iban') {
+        submitData.append('iban', formData.iban);
+      }
 
       // Append all photos
       if (photos.length > 0) {
@@ -56,7 +62,9 @@ const ExpenseForm = ({ accessToken }) => {
         member_name: '',
         description: '',
         amount: '',
-        member_email: ''
+        member_email: '',
+        payment_method: 'iban',
+        iban: ''
       });
       setPhotos([]);
     } catch (err) {
@@ -92,16 +100,61 @@ const ExpenseForm = ({ accessToken }) => {
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.formGroup}>
-            <label style={styles.label}>Member Name *</label>
-            <input
-              type="text"
-              name="member_name"
-              value={formData.member_name}
+            <label style={styles.label}>Payment Method *</label>
+            <select
+              name="payment_method"
+              value={formData.payment_method}
               onChange={handleInputChange}
-              required
-              style={styles.input}
-            />
+              style={styles.select}
+            >
+              <option value="iban">IBAN / Bank Transfer</option>
+              <option value="cash">Cash</option>
+            </select>
           </div>
+
+          {formData.payment_method === 'iban' && (
+            <>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Account Holder Name *</label>
+                <input
+                  type="text"
+                  name="member_name"
+                  value={formData.member_name}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Name as it appears on bank account"
+                  style={styles.input}
+                />
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>IBAN *</label>
+                <input
+                  type="text"
+                  name="iban"
+                  value={formData.iban}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="BE00 0000 0000 0000"
+                  style={styles.input}
+                />
+              </div>
+            </>
+          )}
+
+          {formData.payment_method === 'cash' && (
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Your Name</label>
+              <input
+                type="text"
+                name="member_name"
+                value={formData.member_name}
+                onChange={handleInputChange}
+                placeholder="Optional - we'll use your Mattermost username"
+                style={styles.input}
+              />
+            </div>
+          )}
 
           <div style={styles.formGroup}>
             <label style={styles.label}>Date Entered</label>
@@ -243,6 +296,15 @@ const styles = {
   inputDisabled: {
     opacity: 0.6,
     cursor: 'not-allowed',
+  },
+  select: {
+    padding: '0.75rem',
+    backgroundColor: 'rgb(17, 24, 39)',
+    border: '1px solid rgb(55, 65, 81)',
+    borderRadius: '0.375rem',
+    color: 'rgb(243, 244, 246)',
+    fontSize: '1rem',
+    cursor: 'pointer',
   },
   textarea: {
     resize: 'vertical',

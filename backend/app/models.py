@@ -12,7 +12,7 @@ class ExpenseNote(Base):
     status = Column(String(20), default="pending", nullable=False)
 
     # User-submitted fields
-    member_name = Column(String(255), nullable=False)
+    member_name = Column(String(255), nullable=True)  # Required for IBAN, optional for cash
     date_entered = Column(DateTime, default=datetime.utcnow, nullable=False)
     description = Column(Text, nullable=False)
     amount = Column(Numeric(10, 2), nullable=False)
@@ -20,6 +20,8 @@ class ExpenseNote(Base):
     photo_paths = Column(Text, nullable=True)  # Comma-separated file paths
     signature_path = Column(String(500), nullable=True)
     mattermost_username = Column(String(255), nullable=True)  # From access token
+    payment_method = Column(String(50), nullable=True, default='iban')  # iban, cash
+    iban = Column(String(50), nullable=True)
 
     # Admin fields
     paid = Column(Boolean, default=False)

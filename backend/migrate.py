@@ -35,8 +35,9 @@ def main():
     # 2024-01: Add mattermost_username for DM notifications
     add_column_if_not_exists(cursor, "expense_notes", "mattermost_username", "VARCHAR(255)")
 
-    # Add future migrations here:
-    # add_column_if_not_exists(cursor, "expense_notes", "new_column", "TEXT")
+    # 2024-01: Add payment method fields
+    add_column_if_not_exists(cursor, "expense_notes", "payment_method", "VARCHAR(50) DEFAULT 'iban'")
+    add_column_if_not_exists(cursor, "expense_notes", "iban", "VARCHAR(50)")
 
     conn.commit()
     conn.close()

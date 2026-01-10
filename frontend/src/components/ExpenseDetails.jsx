@@ -191,9 +191,15 @@ const ExpenseDetails = ({ expense, onUpdate }) => {
         {/* Member & Expense Information - Condensed */}
         <div style={styles.infoSection}>
           <div style={styles.infoGrid} className="info-grid-mobile">
+            {expense.mattermost_username && (
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>Mattermost:</span>
+                <span style={styles.infoValue}>@{expense.mattermost_username}</span>
+              </div>
+            )}
             <div style={styles.infoItem}>
               <span style={styles.infoLabel}>Member:</span>
-              <span style={styles.infoValue}>{expense.member_name}</span>
+              <span style={styles.infoValue}>{expense.member_name || '-'}</span>
             </div>
             <div style={styles.infoItem}>
               <span style={styles.infoLabel}>Email:</span>
@@ -211,6 +217,18 @@ const ExpenseDetails = ({ expense, onUpdate }) => {
                 €{parseFloat(expense.amount).toFixed(2)}
               </span>
             </div>
+            <div style={styles.infoItem}>
+              <span style={styles.infoLabel}>Payment Method:</span>
+              <span style={styles.infoValue}>
+                {expense.payment_method === 'iban' ? 'IBAN / Bank Transfer' : expense.payment_method === 'cash' ? 'Cash' : expense.payment_method || '-'}
+              </span>
+            </div>
+            {expense.payment_method === 'iban' && expense.iban && (
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>IBAN:</span>
+                <span style={styles.infoValue}>{expense.iban}</span>
+              </div>
+            )}
           </div>
           <div style={styles.descriptionBox}>
             <span style={styles.infoLabel}>Description:</span>
