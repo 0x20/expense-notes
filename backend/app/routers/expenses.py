@@ -124,8 +124,8 @@ async def submit_expense_note(
                     db, expense.id, photo_paths=photo_paths
                 )
 
-        # Build view URL for submitter
-        view_url = f"{settings.FRONTEND_URL}/view/{expense.view_token}"
+        # Build view URL for submitter (only if view_token exists)
+        view_url = f"{settings.FRONTEND_URL}/view/{expense.view_token}" if expense.view_token else None
 
         # Send notification email to admin
         display_name = member_name or expense.mattermost_username or "Unknown"
