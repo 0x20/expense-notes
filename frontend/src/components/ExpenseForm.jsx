@@ -149,15 +149,16 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
             </>
           )}
 
-          {(formData.payment_method === 'cash' || formData.payment_method === 'bar') && (
+          {formData.payment_method === 'bar' && (
             <div style={styles.formGroup}>
-              <label style={styles.label}>Your Name</label>
+              <label style={styles.label}>Bar Tab Name *</label>
               <input
                 type="text"
                 name="member_name"
                 value={formData.member_name}
                 onChange={handleInputChange}
-                placeholder="Optional - we'll use your Mattermost username"
+                required
+                placeholder="Name the tab is under"
                 style={styles.input}
               />
             </div>
