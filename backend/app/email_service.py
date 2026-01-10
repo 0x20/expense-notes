@@ -60,19 +60,20 @@ class EmailService:
     @staticmethod
     async def send_status_update(
         member_email: str,
-        member_name: str,
+        member_name: Optional[str],
         status: str,
         amount: float,
         description: str
     ):
         status_text = "Paid" if status == "paid" else "Denied"
         subject = f"Expense {status_text}: {description[:50]}"
+        greeting = f"Hello {member_name}," if member_name else "Hello,"
 
         html_content = f"""
         <html>
             <body style="font-family: Arial, sans-serif; color: #333;">
                 <h2 style="color: rgb(255, 173, 179);">Expense {status_text}</h2>
-                <p>Hello {member_name},</p>
+                <p>{greeting}</p>
                 <p>Your expense submission has been <strong>{status.lower()}</strong>.</p>
                 <p><strong>Description:</strong> {description}</p>
                 <p><strong>Amount:</strong> €{amount:.2f}</p>
