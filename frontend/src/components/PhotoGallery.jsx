@@ -83,6 +83,27 @@ const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete
     }
   };
 
+  const downloadFile = async (fileUrl, filename) => {
+    try {
+      const token = localStorage.getItem('admin_token');
+      const response = await fetch(fileUrl, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (!response.ok) throw new Error('Failed to download');
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      console.error('Failed to download file:', e);
+    }
+  };
+
   return (
     <>
       {title && <h3 style={styles.title}>{title}</h3>}
@@ -119,6 +140,18 @@ const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete
                   onClick={() => setLightboxImage(fileUrl)}
                   onError={() => handleImageError(index)}
                 />
+              )}
+              {hoveredIndex === index && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    downloadFile(fileUrl, trimmedPath.split('/').pop());
+                  }}
+                  style={styles.downloadButton}
+                  title="Download"
+                >
+                  ↓
+                </button>
               )}
               {editable && hoveredIndex === index && (
                 <button
@@ -242,6 +275,25 @@ const styles = {
     border: 'none',
     cursor: 'pointer',
     fontSize: '1.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: '1',
+    fontWeight: '600',
+    transition: 'all 0.2s',
+  },
+  downloadButton: {
+    position: 'absolute',
+    bottom: '0.5rem',
+    right: '0.5rem',
+    width: '2rem',
+    height: '2rem',
+    borderRadius: '50%',
+    backgroundColor: 'rgba(255, 173, 179, 0.95)',
+    color: 'rgb(17, 24, 39)',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '1.25rem',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
