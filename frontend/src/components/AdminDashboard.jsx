@@ -70,7 +70,7 @@ const AdminDashboard = ({ onLogout }) => {
 
   const loadFileAsArrayBuffer = async (url) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('admin_token');
       const response = await fetch(url, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });

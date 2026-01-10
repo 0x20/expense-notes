@@ -7,7 +7,7 @@ const AuthenticatedImage = ({ src, alt, style, onClick, onError }) => {
   useEffect(() => {
     const fetchImage = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('admin_token');
         const response = await fetch(src, {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
@@ -70,7 +70,7 @@ const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete
 
   const openPdfWithAuth = async (fileUrl) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('admin_token');
       const response = await fetch(fileUrl, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });

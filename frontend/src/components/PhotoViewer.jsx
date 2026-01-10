@@ -9,7 +9,7 @@ const PhotoViewer = ({ path, type }) => {
   useEffect(() => {
     const fetchImage = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('admin_token');
         const response = await fetch(imageUrl, {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
