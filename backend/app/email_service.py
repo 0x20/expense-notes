@@ -19,8 +19,6 @@ class EmailService:
             logger.warning(f"Email service not configured. Would send to {to_email}: {subject}")
             return
 
-        logger.info(f"Sending email to {to_email}: {subject}")
-
         message = MIMEMultipart("alternative")
         message["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
         message["To"] = to_email
@@ -39,7 +37,6 @@ class EmailService:
                 password=settings.SMTP_PASSWORD,
                 start_tls=True
             )
-            logger.info(f"Email sent successfully to {to_email}")
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {e}")
 

@@ -31,6 +31,7 @@ limiter = Limiter(key_func=get_remote_address)
 async def admin_login(request: Request, login_data: AdminLogin, db: Session = Depends(get_db)):
     """Admin login endpoint"""
     if not authenticate_admin(db, login_data.password):
+        logger.warning(f"Failed admin login attempt from {request.client.host}")
         raise HTTPException(status_code=401, detail="Invalid password")
 
     admin = get_admin_user(db)
@@ -81,29 +82,31 @@ async def update_expense(
 
     # Send notifications if status changed
     if expense_update.status and expense_update.status != old_status:
-        logger.info(f"Status changed from {old_status} to {expense_update.status} for expense {expense_id}")
-        logger.info(f"Sending status update email to {updated_expense.member_email}")
-
         # Email notification
-        await EmailService.send_status_update(
-            updated_expense.member_email,
-            updated_expense.member_name,
-            updated_expense.status,
-            float(updated_expense.amount),
-            updated_expense.description
-        )
-
-        # Mattermost DM notification
-        if updated_expense.mattermost_username:
-            await notify_expense_status_change(
-                updated_expense.mattermost_username,
+        try:
+            await EmailService.send_status_update(
+                updated_expense.member_email,
+                updated_expense.member_name,
                 updated_expense.status,
                 float(updated_expense.amount),
                 updated_expense.description
             )
-    else:
-        logger.debug(f"No status change: old={old_status}, new={expense_update.status}")
+        except Exception as e:
+            logger.error(f"Failed to send status update email to {updated_expense.member_email}: {e}")
 
+        # Mattermost DM notification
+        if updated_expense.mattermost_username:
+            try:
+                result = await notify_expense_status_change(
+                    updated_expense.mattermost_username,
+                    updated_expense.status,
+                    float(updated_expense.amount),
+                    updated_expense.description
+                )
+                if not result:
+                    logger.warning(f"DM notification returned false for {updated_expense.mattermost_username}")
+            except Exception as e:
+                logger.error(f"Failed to send DM notification to {updated_expense.mattermost_username}: {e}")
     return updated_expense
 
 @router.post("/expenses/{expense_id}/attachments")
@@ -160,21 +163,14 @@ async def delete_photo(
     # Normalize the filename (remove duplicate directory prefixes)
     normalized_filename = filename.replace('photos/photos/', 'photos/').replace('attachments/attachments/', 'attachments/')
 
-    print(f"DEBUG: Trying to delete: {normalized_filename}")
-    print(f"DEBUG: Current photo_paths: {expense.photo_paths}")
-    print(f"DEBUG: Current attachment_paths: {expense.attachment_paths}")
-
     if expense.photo_paths:
         photos = [p.strip() for p in expense.photo_paths.split(",") if p.strip()]
         original_count = len(photos)
-        print(f"DEBUG: Photos before filter: {photos}")
         # Filter out the photo that matches
         photos = [p for p in photos if p != normalized_filename]
-        print(f"DEBUG: Photos after filter: {photos}")
         if len(photos) < original_count:
             photo_deleted = True
             photo_paths = ",".join(photos) if photos else ""
-            print(f"DEBUG: Setting photo_paths to: {repr(photo_paths)}")
             expense.photo_paths = photo_paths if photo_paths else None
             db.commit()
             db.refresh(expense)
@@ -192,10 +188,9 @@ async def delete_photo(
             db.refresh(expense)
 
     if photo_deleted:
-        print(f"DEBUG: Photo deleted successfully. New photo_paths: {expense.photo_paths}")
         return {"message": "Photo deleted successfully", "expense": expense}
     else:
-        print(f"DEBUG: Photo not found!")
+        logger.warning(f"Photo not found for deletion: {normalized_filename} in expense {expense_id}")
         raise HTTPException(status_code=404, detail="Photo not found")
 
 @router.delete("/expenses/{expense_id}")
@@ -207,12 +202,12 @@ async def soft_delete_expense(
     """Soft delete an expense (admin only)"""
     expense = get_expense_note(db, expense_id)
     if not expense:
+        logger.warning(f"Attempted to delete non-existent expense: {expense_id}")
         raise HTTPException(status_code=404, detail="Expense not found")
 
     expense.deleted = True
     db.commit()
     db.refresh(expense)
-
     return {"message": "Expense deleted successfully"}
 
 @router.post("/expenses/{expense_id}/restore")
@@ -224,12 +219,12 @@ async def restore_expense(
     """Restore a deleted expense (admin only)"""
     expense = get_expense_note(db, expense_id)
     if not expense:
+        logger.warning(f"Attempted to restore non-existent expense: {expense_id}")
         raise HTTPException(status_code=404, detail="Expense not found")
 
     expense.deleted = False
     db.commit()
     db.refresh(expense)
-
     return {"message": "Expense restored successfully"}
 
 @router.get("/files/{file_type}/{filename}")

@@ -82,9 +82,9 @@ async def notify(request: Request, data: NotifyRequest):
 
     # Send DM
     if send_dm_to_username(data.username, message):
-        logger.info(f"Sent notification to {data.username}")
         return {"status": "sent"}
     else:
+        logger.error(f"Failed to send notification to {data.username}")
         raise HTTPException(status_code=404, detail="User not found or DM failed")
 
 

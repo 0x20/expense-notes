@@ -17,11 +17,9 @@ async def notify_user_via_bot(username: str, message: str) -> bool:
         True if notification was sent, False otherwise
     """
     if not settings.BOT_NOTIFY_URL or not settings.BOT_NOTIFY_SECRET:
-        logger.debug("Bot notification not configured, skipping")
         return False
 
     if not username:
-        logger.debug("No Mattermost username, skipping notification")
         return False
 
     try:
@@ -36,7 +34,6 @@ async def notify_user_via_bot(username: str, message: str) -> bool:
             )
 
             if response.status_code == 200:
-                logger.info(f"Sent notification to {username}")
                 return True
             else:
                 logger.warning(f"Bot notification failed: {response.status_code} - {response.text}")

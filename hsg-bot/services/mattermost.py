@@ -14,16 +14,23 @@ _bot_id = None
 def get_driver() -> Driver:
     """Get Mattermost driver, initializing if needed."""
     global _driver
-    if _driver is None and MATTERMOST_TOKEN:
-        _driver = Driver({
-            'url': MATTERMOST_URL.replace('https://', '').replace('http://', ''),
-            'token': MATTERMOST_TOKEN,
-            'scheme': 'https',
-            'port': 443,
-            'verify': True
-        })
-        _driver.login()
-        logger.info(f"Connected to Mattermost at {MATTERMOST_URL}")
+    if _driver is None:
+        if not MATTERMOST_TOKEN:
+            logger.error("MATTERMOST_TOKEN not configured")
+            return None
+        try:
+            _driver = Driver({
+                'url': MATTERMOST_URL.replace('https://', '').replace('http://', ''),
+                'token': MATTERMOST_TOKEN,
+                'scheme': 'https',
+                'port': 443,
+                'verify': True
+            })
+            _driver.login()
+        except Exception as e:
+            logger.error(f"Failed to connect to Mattermost at {MATTERMOST_URL}: {e}")
+            _driver = None
+            return None
     return _driver
 
 
@@ -32,9 +39,15 @@ def get_bot_id() -> str:
     global _bot_id
     if _bot_id is None:
         driver = get_driver()
-        if driver:
+        if not driver:
+            logger.error("Cannot get bot ID: driver not available")
+            return None
+        try:
             bot_user = driver.users.get_user('me')
             _bot_id = bot_user['id']
+        except Exception as e:
+            logger.error(f"Failed to get bot user info: {e}")
+            return None
     return _bot_id
 
 
@@ -54,26 +67,33 @@ def get_dm_channel(user_id: str) -> str:
     """Get or create DM channel with user."""
     driver = get_driver()
     if not driver:
+        logger.error(f"Cannot create DM channel for user {user_id}: driver not available")
         return None
 
     bot_id = get_bot_id()
     if not bot_id:
+        logger.error(f"Cannot create DM channel for user {user_id}: bot ID not available")
         return None
 
-    channel = driver.channels.create_direct_channel([bot_id, user_id])
-    return channel['id']
+    try:
+        channel = driver.channels.create_direct_channel([bot_id, user_id])
+        return channel['id']
+    except Exception as e:
+        logger.error(f"Failed to create DM channel for user {user_id}: {e}")
+        return None
 
 
 def send_dm(user_id: str, message: str) -> bool:
     """Send a DM to a user by their user ID."""
     driver = get_driver()
     if not driver:
-        logger.error("Mattermost not configured")
+        logger.error(f"Cannot send DM to user {user_id}: Mattermost not configured")
         return False
 
     try:
         channel_id = get_dm_channel(user_id)
         if not channel_id:
+            logger.error(f"Cannot send DM to user {user_id}: failed to get channel")
             return False
 
         driver.posts.create_post({
@@ -82,7 +102,7 @@ def send_dm(user_id: str, message: str) -> bool:
         })
         return True
     except Exception as e:
-        logger.error(f"Failed to send DM to {user_id}: {e}")
+        logger.error(f"Failed to send DM to user {user_id}: {e}")
         return False
 
 
@@ -90,6 +110,6 @@ def send_dm_to_username(username: str, message: str) -> bool:
     """Send a DM to a user by their username."""
     user = get_user_by_username(username)
     if not user:
-        logger.warning(f"User not found: {username}")
+        logger.error(f"Cannot send DM: user not found: {username}")
         return False
     return send_dm(user['id'], message)
