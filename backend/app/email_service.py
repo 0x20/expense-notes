@@ -1,8 +1,11 @@
 import aiosmtplib
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from .config import settings
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 class EmailService:
     @staticmethod
@@ -13,8 +16,10 @@ class EmailService:
         plain_content: Optional[str] = None
     ):
         if not settings.SMTP_HOST:
-            print(f"Email service not configured. Would send to {to_email}: {subject}")
+            logger.warning(f"Email service not configured. Would send to {to_email}: {subject}")
             return
+
+        logger.info(f"Sending email to {to_email}: {subject}")
 
         message = MIMEMultipart("alternative")
         message["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
@@ -34,8 +39,9 @@ class EmailService:
                 password=settings.SMTP_PASSWORD,
                 start_tls=True
             )
+            logger.info(f"Email sent successfully to {to_email}")
         except Exception as e:
-            print(f"Failed to send email: {e}")
+            logger.error(f"Failed to send email to {to_email}: {e}")
 
     @staticmethod
     async def send_new_expense_notification(expense_id: str, member_name: str, amount: float):

@@ -4,6 +4,9 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import timedelta
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 from ..database import get_db
 from ..schemas import (
@@ -78,6 +81,9 @@ async def update_expense(
 
     # Send notifications if status changed
     if expense_update.status and expense_update.status != old_status:
+        logger.info(f"Status changed from {old_status} to {expense_update.status} for expense {expense_id}")
+        logger.info(f"Sending status update email to {updated_expense.member_email}")
+
         # Email notification
         await EmailService.send_status_update(
             updated_expense.member_email,
@@ -95,6 +101,8 @@ async def update_expense(
                 float(updated_expense.amount),
                 updated_expense.description
             )
+    else:
+        logger.debug(f"No status change: old={old_status}, new={expense_update.status}")
 
     return updated_expense
 
