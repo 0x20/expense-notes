@@ -22,18 +22,23 @@ limiter = Limiter(key_func=get_remote_address)
 
 async def verify_public_access(access: Optional[str] = Query(None)) -> Optional[dict]:
     """Verify access token for public endpoints"""
-    if not settings.ACCESS_TOKEN_REQUIRED:
-        return None  # Skip verification in dev mode
-
+    # If no token provided
     if not access:
-        raise HTTPException(status_code=401, detail="Access token required")
+        if settings.ACCESS_TOKEN_REQUIRED:
+            raise HTTPException(status_code=401, detail="Access token required")
+        return None
 
+    # Try to verify token if we have a public key
     if not settings.ACCESS_TOKEN_PUBLIC_KEY:
-        raise HTTPException(status_code=500, detail="Server not configured for token verification")
+        if settings.ACCESS_TOKEN_REQUIRED:
+            raise HTTPException(status_code=500, detail="Server not configured for token verification")
+        return None
 
     payload = verify_access_token(access, settings.ACCESS_TOKEN_PUBLIC_KEY)
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired access token")
+        if settings.ACCESS_TOKEN_REQUIRED:
+            raise HTTPException(status_code=401, detail="Invalid or expired access token")
+        return None
 
     return payload
 
