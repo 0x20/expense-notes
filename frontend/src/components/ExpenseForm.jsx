@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { expenseAPI } from '../services/api';
 
-const ExpenseForm = ({ accessToken }) => {
+const ExpenseForm = ({ accessToken, mattermostUsername }) => {
   const [formData, setFormData] = useState({
     member_name: '',
     description: '',
@@ -94,6 +94,12 @@ const ExpenseForm = ({ accessToken }) => {
       <div style={styles.card}>
         <h1 style={styles.title}>Submit Expense Note</h1>
 
+        {mattermostUsername && (
+          <div style={styles.usernameDisplay}>
+            Submitting as: <strong>@{mattermostUsername}</strong>
+          </div>
+        )}
+
         {error && (
           <div style={styles.errorMessage}>{error}</div>
         )}
@@ -109,6 +115,7 @@ const ExpenseForm = ({ accessToken }) => {
             >
               <option value="iban">IBAN / Bank Transfer</option>
               <option value="cash">Cash</option>
+              <option value="bar">Bar Tab</option>
             </select>
           </div>
 
@@ -142,7 +149,7 @@ const ExpenseForm = ({ accessToken }) => {
             </>
           )}
 
-          {formData.payment_method === 'cash' && (
+          {(formData.payment_method === 'cash' || formData.payment_method === 'bar') && (
             <div style={styles.formGroup}>
               <label style={styles.label}>Your Name</label>
               <input
@@ -265,8 +272,17 @@ const styles = {
   title: {
     fontSize: '2rem',
     fontWeight: '600',
-    marginBottom: '2rem',
+    marginBottom: '1rem',
     color: 'rgb(255, 173, 179)',
+  },
+  usernameDisplay: {
+    padding: '0.75rem 1rem',
+    backgroundColor: 'rgba(255, 173, 179, 0.1)',
+    border: '1px solid rgba(255, 173, 179, 0.3)',
+    borderRadius: '0.375rem',
+    color: 'rgb(243, 244, 246)',
+    marginBottom: '1.5rem',
+    fontSize: '0.875rem',
   },
   form: {
     display: 'flex',

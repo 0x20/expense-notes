@@ -4,11 +4,25 @@ import ExpenseForm from './components/ExpenseForm';
 import AdminLogin from './components/AdminLogin';
 import AdminDashboard from './components/AdminDashboard';
 
+// Decode username from Ed25519 signed token (base64url(signature + payload))
+function decodeTokenUsername(token) {
+  try {
+    const decoded = atob(token.replace(/-/g, '+').replace(/_/g, '/'));
+    // Signature is 64 bytes, payload follows
+    const payloadStr = decoded.slice(64);
+    const payload = JSON.parse(payloadStr);
+    return payload.u || null;
+  } catch {
+    return null;
+  }
+}
+
 function AppContent() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(
     !!localStorage.getItem('admin_token')
   );
   const [accessToken, setAccessToken] = useState(null);
+  const [mattermostUsername, setMattermostUsername] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -18,7 +32,9 @@ function AppContent() {
     const token = params.get('access');
     if (token) {
       setAccessToken(token);
+      setMattermostUsername(decodeTokenUsername(token));
       sessionStorage.setItem('access_token', token);
+      sessionStorage.setItem('mattermost_username', decodeTokenUsername(token) || '');
       // Clean the URL by removing the query parameter
       navigate(location.pathname, { replace: true });
     } else {
@@ -26,6 +42,7 @@ function AppContent() {
       const storedToken = sessionStorage.getItem('access_token');
       if (storedToken) {
         setAccessToken(storedToken);
+        setMattermostUsername(sessionStorage.getItem('mattermost_username') || decodeTokenUsername(storedToken));
       }
     }
   }, [location, navigate]);
@@ -41,7 +58,7 @@ function AppContent() {
 
   return (
     <Routes>
-      <Route path="/" element={<ExpenseForm accessToken={accessToken} />} />
+      <Route path="/" element={<ExpenseForm accessToken={accessToken} mattermostUsername={mattermostUsername} />} />
       <Route
         path="/admin"
         element={

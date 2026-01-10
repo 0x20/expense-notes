@@ -220,7 +220,7 @@ const ExpenseDetails = ({ expense, onUpdate }) => {
             <div style={styles.infoItem}>
               <span style={styles.infoLabel}>Payment Method:</span>
               <span style={styles.infoValue}>
-                {expense.payment_method === 'iban' ? 'IBAN / Bank Transfer' : expense.payment_method === 'cash' ? 'Cash' : expense.payment_method || '-'}
+                {expense.payment_method === 'iban' ? 'IBAN / Bank Transfer' : expense.payment_method === 'cash' ? 'Cash' : expense.payment_method === 'bar' ? 'Bar Tab' : expense.payment_method || '-'}
               </span>
             </div>
             {expense.payment_method === 'iban' && expense.iban && (
