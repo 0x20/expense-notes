@@ -77,6 +77,12 @@ async def submit_expense_note(
 
     expense = create_expense_note(db, expense_data)
 
+    # Store Mattermost username from token if available
+    if token_payload and token_payload.get('u'):
+        expense.mattermost_username = token_payload['u']
+        db.commit()
+        db.refresh(expense)
+
     # Handle multiple photo uploads
     if photos:
         photo_paths_list = []

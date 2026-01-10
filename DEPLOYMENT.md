@@ -44,40 +44,57 @@ Edit `backend/.env` and update:
 The system uses Ed25519 signed tokens to secure the public expense submission form.
 
 ```bash
-cd bot
-python3 token_generator.py
+cd hsg-bot
+python -m services.tokens
 ```
 
 This outputs:
-- **Private key** - Add to `bot/.env` as `ACCESS_TOKEN_PRIVATE_KEY`
+- **Private key** - Add to `hsg-bot/.env` as `ACCESS_TOKEN_PRIVATE_KEY`
 - **Public key** - Add to `backend/.env` as `ACCESS_TOKEN_PUBLIC_KEY`
 
-### 5. Configure Mattermost Bot
-
-Create `bot/.env`:
+### 5. Configure HSG Bot
 
 ```bash
-cp bot/.env.example bot/.env
+cp hsg-bot/.env.example hsg-bot/.env
 ```
-
-Edit `bot/.env` and set:
-- `MATTERMOST_URL`: Your Mattermost server URL
-- `MATTERMOST_TOKEN`: Bot token (create bot account in Mattermost first)
-- `BOT_USERNAME`: `expense-bot` (or your chosen name)
-- `ACCESS_TOKEN_PRIVATE_KEY`: Private key from step 4
-- `EXPENSE_URL`: Your production domain
 
 **Create bot account in Mattermost:**
 1. System Console → Integrations → Bot Accounts → Add Bot Account
-2. Username: `expense-bot`
-3. Copy the generated token to `bot/.env`
+2. Username: `hsg-bot`
+3. Display Name: `Hackerspace Gent Bot`
+4. Copy the generated **bot token**
 
-**Create outgoing webhook:**
-1. Integrations → Outgoing Webhooks → Add Outgoing Webhook
-2. Trigger Words: `!expenses`, `!help`
-3. Callback URL: `https://expenses.hackerspace.gent/bot/webhook`
+**Create slash command in Mattermost:**
+1. Integrations → Slash Commands → Add Slash Command
+2. Command Trigger Word: `expenses`
+3. Request URL: `https://expenses.hackerspace.gent/bot/expenses`
+4. Request Method: POST
+5. Autocomplete: Enable, Hint: `[help]`
+6. Copy the generated **slash token**
 
-See `bot/README.md` for detailed setup instructions.
+**Generate shared secret:**
+```bash
+openssl rand -hex 32
+```
+
+**Edit `hsg-bot/.env`:**
+```env
+ACCESS_TOKEN_PRIVATE_KEY=<private key from step 4>
+MATTERMOST_SLASH_TOKEN=<slash token from above>
+MATTERMOST_URL=https://mattermost.hackerspace.gent
+MATTERMOST_TOKEN=<bot token from above>
+NOTIFY_SECRET=<shared secret>
+EXPENSE_URL=https://expenses.hackerspace.gent
+```
+
+**Edit `backend/.env` and add:**
+```env
+BOT_NOTIFY_URL=http://hsg-bot:5000/notify
+BOT_NOTIFY_SECRET=<same shared secret>
+```
+
+Users can then use `/expenses` for a link or `/expenses help` for help.
+When their expense status changes, they'll receive a DM from the bot.
 
 ### 6. Create Admin User
 
@@ -118,10 +135,10 @@ docker compose logs -f
 Visit your domain:
 - Frontend: `https://expenses.hackerspace.gent`
 - Backend API docs: `https://expenses.hackerspace.gent/docs`
-- Bot webhook: `https://expenses.hackerspace.gent/bot/webhook`
+- Bot health: `https://expenses.hackerspace.gent/bot/health`
 
 **Test the bot:**
-In Mattermost, send `!expenses` to get an access link.
+In Mattermost, type `/expenses` to get a private access link (only you see the response).
 
 ## Security Features
 

@@ -15,6 +15,7 @@ from ..crud import (
 )
 from ..auth import authenticate_admin, create_access_token, get_current_admin
 from ..email_service import EmailService
+from ..bot_notification import notify_expense_status_change
 from ..config import settings
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -75,8 +76,9 @@ async def update_expense(
     old_status = expense.status
     updated_expense = update_expense_note(db, expense_id, expense_update)
 
-    # Send email notification if status changed
+    # Send notifications if status changed
     if expense_update.status and expense_update.status != old_status:
+        # Email notification
         await EmailService.send_status_update(
             updated_expense.member_email,
             updated_expense.member_name,
@@ -84,6 +86,15 @@ async def update_expense(
             float(updated_expense.amount),
             updated_expense.description
         )
+
+        # Mattermost DM notification
+        if updated_expense.mattermost_username:
+            await notify_expense_status_change(
+                updated_expense.mattermost_username,
+                updated_expense.status,
+                float(updated_expense.amount),
+                updated_expense.description
+            )
 
     return updated_expense
 

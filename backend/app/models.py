@@ -19,6 +19,7 @@ class ExpenseNote(Base):
     member_email = Column(String(255), nullable=False)
     photo_paths = Column(Text, nullable=True)  # Comma-separated file paths
     signature_path = Column(String(500), nullable=True)
+    mattermost_username = Column(String(255), nullable=True)  # From access token
 
     # Admin fields
     paid = Column(Boolean, default=False)

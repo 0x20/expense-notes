@@ -44,6 +44,7 @@ class ExpenseNoteResponse(BaseModel):
     updated_at: datetime
     admin_notes: Optional[str]
     deleted: bool
+    mattermost_username: Optional[str]
 
     class Config:
         from_attributes = True

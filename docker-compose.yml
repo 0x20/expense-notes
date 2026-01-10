@@ -40,23 +40,23 @@ services:
     depends_on:
       - backend
 
-  bot:
+  hsg-bot:
     build:
-      context: ./bot
+      context: ./hsg-bot
       dockerfile: Dockerfile
-    container_name: expense-notes-bot
+    container_name: hsg-bot
     restart: unless-stopped
     env_file:
-      - ./bot/.env
+      - ./hsg-bot/.env
     labels:
       - traefik.enable=true
-      - traefik.http.routers.expense-bot.rule=Host(`expenses.hackerspace.gent`) && PathPrefix(`/bot`)
-      - traefik.http.routers.expense-bot.entrypoints=public
-      - traefik.http.routers.expense-bot.tls=true
-      - traefik.http.routers.expense-bot.tls.certresolver=letsencrypt
-      - traefik.http.services.expense-bot.loadbalancer.server.port=5000
-      - traefik.http.middlewares.expense-bot-stripprefix.stripprefix.prefixes=/bot
-      - traefik.http.routers.expense-bot.middlewares=expense-bot-stripprefix
+      - traefik.http.routers.hsg-bot.rule=Host(`expenses.hackerspace.gent`) && PathPrefix(`/bot`)
+      - traefik.http.routers.hsg-bot.entrypoints=public
+      - traefik.http.routers.hsg-bot.tls=true
+      - traefik.http.routers.hsg-bot.tls.certresolver=letsencrypt
+      - traefik.http.services.hsg-bot.loadbalancer.server.port=5000
+      - traefik.http.middlewares.hsg-bot-stripprefix.stripprefix.prefixes=/bot
+      - traefik.http.routers.hsg-bot.middlewares=hsg-bot-stripprefix
     networks:
       - default
 

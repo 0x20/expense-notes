@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_PUBLIC_KEY: Optional[str] = None  # Base64-encoded Ed25519 public key
     ACCESS_TOKEN_REQUIRED: bool = False  # Set True in production
 
+    # Bot notification settings
+    BOT_NOTIFY_URL: Optional[str] = None  # e.g., http://bot:5000/notify
+    BOT_NOTIFY_SECRET: Optional[str] = None  # Shared secret with bot
+
     class Config:
         env_file = ".env"
 
