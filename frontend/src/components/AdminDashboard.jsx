@@ -70,7 +70,11 @@ const AdminDashboard = ({ onLogout }) => {
 
   const loadFileAsArrayBuffer = async (url) => {
     try {
-      const response = await fetch(url);
+      const token = localStorage.getItem('token');
+      const response = await fetch(url, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (!response.ok) throw new Error('Failed to load');
       return await response.arrayBuffer();
     } catch (error) {
       console.error('Failed to load file:', url, error);
@@ -173,7 +177,7 @@ const AdminDashboard = ({ onLogout }) => {
           for (const photoPath of allPhotos) {
             const trimmedPath = photoPath.trim();
             const isPDF = trimmedPath.toLowerCase().endsWith('.pdf');
-            const fileUrl = `http://localhost:8000/uploads/${trimmedPath}`;
+            const fileUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/files/${trimmedPath}`;
 
             if (isPDF) {
               // Load and merge PDF

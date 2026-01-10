@@ -234,7 +234,7 @@ async def get_file(
     current_admin = Depends(get_current_admin)
 ):
     """Serve uploaded files (admin only)"""
-    if file_type not in ["photos", "signatures"]:
+    if file_type not in ["photos", "signatures", "attachments"]:
         raise HTTPException(status_code=400, detail="Invalid file type")
 
     file_path = os.path.join(settings.UPLOAD_DIR, file_type, filename)

@@ -1,10 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+const AuthenticatedImage = ({ src, alt, style, onClick, onError }) => {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const fetchImage = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(src, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (!response.ok) throw new Error('Failed to load');
+        const blob = await response.blob();
+        setBlobUrl(URL.createObjectURL(blob));
+      } catch (e) {
+        setError(true);
+        onError?.();
+      }
+    };
+    fetchImage();
+    return () => { if (blobUrl) URL.revokeObjectURL(blobUrl); };
+  }, [src]);
+
+  if (error) return null;
+  if (!blobUrl) return <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgb(156, 163, 175)' }}>Loading...</div>;
+  return <img src={blobUrl} alt={alt} style={style} onClick={onClick} />;
+};
 
 const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete }) => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [lightboxImage, setLightboxImage] = useState(null);
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [imageErrors, setImageErrors] = useState({});
 
   if (!photoPaths) return null;
 
@@ -20,7 +49,7 @@ const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete
   const handleConfirmDelete = async () => {
     if (deleteConfirm && onDelete && !deleting) {
       setDeleting(true);
-      setDeleteConfirm(null); // Close modal immediately
+      setDeleteConfirm(null);
       try {
         await onDelete(deleteConfirm.path);
       } catch (err) {
@@ -35,12 +64,31 @@ const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete
     setDeleteConfirm(null);
   };
 
+  const handleImageError = (index) => {
+    setImageErrors(prev => ({ ...prev, [index]: true }));
+  };
+
+  const openPdfWithAuth = async (fileUrl) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(fileUrl, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (!response.ok) throw new Error('Failed to load PDF');
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+    } catch (e) {
+      console.error('Failed to open PDF:', e);
+    }
+  };
+
   return (
     <>
       {title && <h3 style={styles.title}>{title}</h3>}
       {paths.map((path, index) => {
           const trimmedPath = path.trim();
-          const fileUrl = `${apiUrl}/uploads/${trimmedPath}`;
+          const fileUrl = `${apiUrl}/api/admin/files/${trimmedPath}`;
           const isPDF = trimmedPath.toLowerCase().endsWith('.pdf');
 
           return (
@@ -53,28 +101,24 @@ const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete
               {isPDF ? (
                 <div
                   style={styles.pdfPreview}
-                  onClick={() => window.open(fileUrl, '_blank')}
+                  onClick={() => openPdfWithAuth(fileUrl)}
                 >
                   <div style={styles.pdfIcon}>📄</div>
                   <div style={styles.pdfText}>PDF Document</div>
                   <div style={styles.pdfFilename}>{trimmedPath.split('/').pop()}</div>
                 </div>
+              ) : imageErrors[index] ? (
+                <div style={styles.errorMessage}>
+                  Failed to load image
+                </div>
               ) : (
-                <>
-                  <img
-                    src={fileUrl}
-                    alt={`${title} ${index + 1}`}
-                    style={styles.image}
-                    onClick={() => setLightboxImage(fileUrl)}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                  <div style={styles.errorMessage}>
-                    Failed to load image
-                  </div>
-                </>
+                <AuthenticatedImage
+                  src={fileUrl}
+                  alt={`${title} ${index + 1}`}
+                  style={styles.image}
+                  onClick={() => setLightboxImage(fileUrl)}
+                  onError={() => handleImageError(index)}
+                />
               )}
               {editable && hoveredIndex === index && (
                 <button
@@ -101,7 +145,7 @@ const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete
             >
               ×
             </button>
-            <img
+            <AuthenticatedImage
               src={lightboxImage}
               alt="Full size"
               style={styles.lightboxImage}
@@ -257,7 +301,7 @@ const styles = {
     cursor: 'pointer',
   },
   errorMessage: {
-    display: 'none',
+    display: 'flex',
     padding: '1rem',
     textAlign: 'center',
     color: 'rgb(156, 163, 175)',
