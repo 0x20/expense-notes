@@ -83,8 +83,6 @@ const AdminDashboard = ({ onLogout }) => {
   };
 
   const handleExportPDF = async () => {
-    console.log('Export PDF clicked', { startDate, endDate });
-
     if (!startDate || !endDate) {
       alert('Please select both start and end dates');
       return;
@@ -99,10 +97,8 @@ const AdminDashboard = ({ onLogout }) => {
       return inDateRange && matchesStatus;
     });
 
-    console.log('Filtered expenses:', filteredExpenses.length);
-
     if (filteredExpenses.length === 0) {
-      alert('No expenses found in the selected date range');
+      alert('No expenses found in the selected date range with selected statuses');
       return;
     }
 
@@ -110,95 +106,241 @@ const AdminDashboard = ({ onLogout }) => {
       const pdfDoc = await PDFDocument.create();
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
       const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      const margin = 40;
+      const lineHeight = 12;
+      const gray = rgb(0.4, 0.4, 0.4);
+      const black = rgb(0, 0, 0);
+
+      // Helper: wrap text to fit width
+      const wrapText = (text, maxWidth, fontSize) => {
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+        for (const word of words) {
+          const testLine = currentLine ? `${currentLine} ${word}` : word;
+          const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+          if (testWidth > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+          } else {
+            currentLine = testLine;
+          }
+        }
+        if (currentLine) lines.push(currentLine);
+        return lines;
+      };
+
+      // Helper: draw page footer
+      const drawFooter = (page, expenseIndex, totalExpenses, memberName) => {
+        const { width } = page.getSize();
+        page.drawText(`Expense ${expenseIndex + 1}/${totalExpenses} — ${memberName}`, {
+          x: margin,
+          y: 20,
+          size: 8,
+          font,
+          color: gray,
+        });
+        page.drawText(format(new Date(), 'yyyy-MM-dd'), {
+          x: width - margin - 60,
+          y: 20,
+          size: 8,
+          font,
+          color: gray,
+        });
+      };
+
+      // Calculate totals for cover page
+      const totalAmount = filteredExpenses.reduce((sum, e) => sum + parseFloat(e.amount), 0);
+      const statusCounts = filteredExpenses.reduce((acc, e) => {
+        acc[e.status] = (acc[e.status] || 0) + 1;
+        return acc;
+      }, {});
+
+      // Cover page
+      let page = pdfDoc.addPage();
+      let { width, height } = page.getSize();
+      let yPos = height - 80;
+
+      page.drawText('Expense Report', { x: margin, y: yPos, size: 24, font: fontBold });
+      yPos -= 30;
+
+      page.drawText(`${format(startDate, 'yyyy/MM/dd')} — ${format(endDate, 'yyyy/MM/dd')}`, {
+        x: margin, y: yPos, size: 12, font, color: gray
+      });
+      yPos -= 40;
+
+      // Summary box
+      page.drawRectangle({
+        x: margin,
+        y: yPos - 80,
+        width: width - 2 * margin,
+        height: 90,
+        borderColor: rgb(0.8, 0.8, 0.8),
+        borderWidth: 1,
+      });
+
+      page.drawText('Summary', { x: margin + 10, y: yPos - 5, size: 11, font: fontBold });
+      yPos -= 25;
+      page.drawText(`Total Expenses: ${filteredExpenses.length}`, { x: margin + 10, y: yPos, size: 10, font });
+      yPos -= 15;
+      page.drawText(`Total Amount: €${totalAmount.toFixed(2)}`, { x: margin + 10, y: yPos, size: 10, font: fontBold });
+      yPos -= 15;
+      const statusText = Object.entries(statusCounts).map(([s, c]) => `${s}: ${c}`).join('  |  ');
+      page.drawText(`Status: ${statusText}`, { x: margin + 10, y: yPos, size: 10, font });
+      yPos -= 50;
+
+      // Table of contents
+      page.drawText('Contents', { x: margin, y: yPos, size: 11, font: fontBold });
+      yPos -= 18;
 
       for (let i = 0; i < filteredExpenses.length; i++) {
-        const expense = filteredExpenses[i];
-        let page = pdfDoc.addPage();
-        const { width, height } = page.getSize();
-        const margin = 50;
-        let yPos = height - margin;
-
-        // Title
-        page.drawText('Expense Note', { x: margin, y: yPos, size: 16, font: fontBold });
-        yPos -= 25;
-
-        // Member Information
-        page.drawText(`Member: ${expense.member_name}`, { x: margin, y: yPos, size: 10, font });
-        yPos -= 15;
-        page.drawText(`Email: ${expense.member_email}`, { x: margin, y: yPos, size: 10, font });
-        yPos -= 15;
-        page.drawText(`Date: ${format(new Date(expense.date_entered), 'yyyy/MM/dd')}`, { x: margin, y: yPos, size: 10, font });
-        yPos -= 15;
-        page.drawText(`Amount: €${parseFloat(expense.amount).toFixed(2)}`, { x: margin, y: yPos, size: 10, font: fontBold });
-        yPos -= 15;
-        page.drawText(`Description: ${expense.description}`, { x: margin, y: yPos, size: 10, font });
-        yPos -= 25;
-
-        // Admin Information
-        if (expense.status !== 'pending') {
-          page.drawText('Admin Information', { x: margin, y: yPos, size: 10, font: fontBold });
-          yPos -= 15;
-          page.drawText(`Status: ${expense.status.toUpperCase()}`, { x: margin, y: yPos, size: 10, font });
-          yPos -= 15;
-          if (expense.pay_date) {
-            page.drawText(`Pay Date: ${format(new Date(expense.pay_date), 'yyyy/MM/dd')}`, { x: margin, y: yPos, size: 10, font });
-            yPos -= 15;
-          }
-          if (expense.paid_from) {
-            page.drawText(`Paid From: ${expense.paid_from}`, { x: margin, y: yPos, size: 10, font });
-            yPos -= 15;
-          }
-          if (expense.paid_to) {
-            page.drawText(`Paid To: ${expense.paid_to}`, { x: margin, y: yPos, size: 10, font });
-            yPos -= 15;
-          }
-          if (expense.financial_responsible) {
-            page.drawText(`Financial Responsible: ${expense.financial_responsible}`, { x: margin, y: yPos, size: 10, font });
-            yPos -= 15;
-          }
-          if (expense.admin_notes) {
-            page.drawText(`Notes: ${expense.admin_notes}`, { x: margin, y: yPos, size: 10, font });
-            yPos -= 15;
-          }
-          yPos -= 10;
+        const e = filteredExpenses[i];
+        if (yPos < 50) {
+          page = pdfDoc.addPage();
+          yPos = height - margin;
         }
+        const tocLine = `${i + 1}. ${e.member_name} — €${parseFloat(e.amount).toFixed(2)} — ${e.status}`;
+        page.drawText(tocLine, { x: margin + 10, y: yPos, size: 9, font });
+        yPos -= 14;
+      }
 
-        // Receipt Photos and PDFs
-        const allPhotos = [expense.photo_paths, expense.attachment_paths]
+      // Each expense
+      for (let i = 0; i < filteredExpenses.length; i++) {
+        const expense = filteredExpenses[i];
+        page = pdfDoc.addPage();
+        ({ width, height } = page.getSize());
+        yPos = height - margin;
+        const contentWidth = width - 2 * margin;
+
+        // Header line
+        page.drawLine({
+          start: { x: margin, y: yPos },
+          end: { x: width - margin, y: yPos },
+          thickness: 2,
+          color: rgb(0.2, 0.2, 0.2),
+        });
+        yPos -= 20;
+
+        // Title row: name + amount
+        page.drawText(expense.member_name, { x: margin, y: yPos, size: 14, font: fontBold });
+        const amountText = `€${parseFloat(expense.amount).toFixed(2)}`;
+        const amountWidth = fontBold.widthOfTextAtSize(amountText, 14);
+        page.drawText(amountText, { x: width - margin - amountWidth, y: yPos, size: 14, font: fontBold });
+        yPos -= 16;
+
+        // Subtitle row: email + date
+        page.drawText(expense.member_email, { x: margin, y: yPos, size: 9, font, color: gray });
+        const dateText = format(new Date(expense.date_entered), 'yyyy/MM/dd');
+        const dateWidth = font.widthOfTextAtSize(dateText, 9);
+        page.drawText(dateText, { x: width - margin - dateWidth, y: yPos, size: 9, font, color: gray });
+        yPos -= 20;
+
+        // Description with wrapping
+        const descLines = wrapText(expense.description || '', contentWidth, 10);
+        for (const line of descLines) {
+          page.drawText(line, { x: margin, y: yPos, size: 10, font });
+          yPos -= lineHeight;
+        }
+        yPos -= 10;
+
+        // Status badge
+        const statusColors = {
+          pending: rgb(0.9, 0.7, 0.1),
+          paid: rgb(0.2, 0.7, 0.3),
+          denied: rgb(0.8, 0.2, 0.2),
+        };
+        const statusColor = statusColors[expense.status] || black;
+        page.drawText(expense.status.toUpperCase(), { x: margin, y: yPos, size: 10, font: fontBold, color: statusColor });
+        yPos -= 18;
+
+        // Admin details (condensed, two-column where possible)
+        if (expense.status !== 'pending') {
+          const adminFields = [];
+          if (expense.pay_date) adminFields.push(['Pay Date', format(new Date(expense.pay_date), 'yyyy/MM/dd')]);
+          if (expense.paid_from) adminFields.push(['From', expense.paid_from]);
+          if (expense.paid_to) adminFields.push(['To', expense.paid_to]);
+          if (expense.financial_responsible) adminFields.push(['Responsible', expense.financial_responsible]);
+
+          // Two-column layout for admin fields
+          const colWidth = contentWidth / 2;
+          for (let j = 0; j < adminFields.length; j += 2) {
+            const [label1, value1] = adminFields[j];
+            page.drawText(`${label1}: `, { x: margin, y: yPos, size: 9, font: fontBold, color: gray });
+            page.drawText(value1, { x: margin + font.widthOfTextAtSize(`${label1}: `, 9), y: yPos, size: 9, font });
+
+            if (adminFields[j + 1]) {
+              const [label2, value2] = adminFields[j + 1];
+              page.drawText(`${label2}: `, { x: margin + colWidth, y: yPos, size: 9, font: fontBold, color: gray });
+              page.drawText(value2, { x: margin + colWidth + font.widthOfTextAtSize(`${label2}: `, 9), y: yPos, size: 9, font });
+            }
+            yPos -= lineHeight;
+          }
+
+          // Admin notes (full width, wrapped)
+          if (expense.admin_notes) {
+            yPos -= 5;
+            page.drawText('Notes: ', { x: margin, y: yPos, size: 9, font: fontBold, color: gray });
+            const notesLines = wrapText(expense.admin_notes, contentWidth - 40, 9);
+            const notesLabelWidth = font.widthOfTextAtSize('Notes: ', 9);
+            page.drawText(notesLines[0] || '', { x: margin + notesLabelWidth, y: yPos, size: 9, font });
+            yPos -= lineHeight;
+            for (let k = 1; k < notesLines.length; k++) {
+              page.drawText(notesLines[k], { x: margin + notesLabelWidth, y: yPos, size: 9, font });
+              yPos -= lineHeight;
+            }
+          }
+        }
+        yPos -= 10;
+
+        // Attachments section
+        const allFiles = [expense.photo_paths, expense.attachment_paths]
           .filter(Boolean)
           .join(',')
           .split(',')
           .filter(p => p.trim());
 
-        if (allPhotos.length > 0) {
-          page.drawText('Receipt Photos:', { x: margin, y: yPos, size: 10, font: fontBold });
+        if (allFiles.length > 0) {
+          page.drawLine({
+            start: { x: margin, y: yPos },
+            end: { x: width - margin, y: yPos },
+            thickness: 0.5,
+            color: rgb(0.8, 0.8, 0.8),
+          });
+          yPos -= 15;
+          page.drawText('Attachments', { x: margin, y: yPos, size: 10, font: fontBold });
           yPos -= 15;
 
-          for (const photoPath of allPhotos) {
-            const trimmedPath = photoPath.trim();
+          for (const filePath of allFiles) {
+            const trimmedPath = filePath.trim();
+            const fileName = trimmedPath.split('/').pop();
             const isPDF = trimmedPath.toLowerCase().endsWith('.pdf');
             const fileUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/files/${trimmedPath}`;
 
             if (isPDF) {
-              // Load and merge PDF
               const pdfBytes = await loadFileAsArrayBuffer(fileUrl);
               if (pdfBytes) {
                 try {
                   const attachedPdf = await PDFDocument.load(pdfBytes);
                   const copiedPages = await pdfDoc.copyPages(attachedPdf, attachedPdf.getPageIndices());
-                  copiedPages.forEach((copiedPage) => {
+
+                  // Note on current page about the PDF
+                  page.drawText(`📄 ${fileName} (${copiedPages.length} page${copiedPages.length > 1 ? 's' : ''} follow)`, {
+                    x: margin + 5, y: yPos, size: 9, font, color: gray
+                  });
+                  yPos -= lineHeight;
+
+                  // Add the PDF pages with a header on each
+                  copiedPages.forEach((copiedPage, pageIdx) => {
                     pdfDoc.addPage(copiedPage);
                   });
-                  page.drawText(`PDF: ${trimmedPath.split('/').pop()} (${copiedPages.length} pages inserted)`, { x: margin, y: yPos, size: 10, font });
-                  yPos -= 15;
                 } catch (pdfError) {
                   console.error('Failed to merge PDF:', pdfError);
-                  page.drawText(`PDF: ${trimmedPath.split('/').pop()} (failed to merge)`, { x: margin, y: yPos, size: 10, font });
-                  yPos -= 15;
+                  page.drawText(`📄 ${fileName} (merge failed)`, { x: margin + 5, y: yPos, size: 9, font, color: rgb(0.8, 0.2, 0.2) });
+                  yPos -= lineHeight;
                 }
               }
             } else {
-              // Load and embed image
+              // Image
               const imageBytes = await loadFileAsArrayBuffer(fileUrl);
               if (imageBytes) {
                 try {
@@ -210,53 +352,45 @@ const AdminDashboard = ({ onLogout }) => {
                   }
 
                   const imgDims = image.scale(1);
-                  const maxWidth = width - (2 * margin);
-                  const maxHeight = 400;
+                  const maxWidth = contentWidth;
+                  const maxHeight = 350;
 
-                  // Calculate dimensions maintaining aspect ratio
-                  const aspectRatio = imgDims.height / imgDims.width;
                   let imgWidth = Math.min(imgDims.width, maxWidth);
-                  let imgHeight = imgWidth * aspectRatio;
-
+                  let imgHeight = imgWidth * (imgDims.height / imgDims.width);
                   if (imgHeight > maxHeight) {
                     imgHeight = maxHeight;
-                    imgWidth = imgHeight / aspectRatio;
+                    imgWidth = imgHeight / (imgDims.height / imgDims.width);
                   }
 
-                  // Check if we need a new page
-                  if (yPos - imgHeight < margin) {
+                  // New page if needed
+                  if (yPos - imgHeight < margin + 30) {
+                    drawFooter(page, i, filteredExpenses.length, expense.member_name);
                     page = pdfDoc.addPage();
+                    ({ width, height } = page.getSize());
                     yPos = height - margin;
                   }
 
-                  // Draw image
                   page.drawImage(image, {
                     x: margin,
                     y: yPos - imgHeight,
                     width: imgWidth,
                     height: imgHeight,
                   });
-                  yPos -= imgHeight + 15;
+                  yPos -= imgHeight + 10;
                 } catch (imgError) {
-                  console.error('Failed to add image:', imgError);
-                  page.drawText(`Image: ${trimmedPath.split('/').pop()} (failed to add)`, { x: margin, y: yPos, size: 10, font });
-                  yPos -= 15;
+                  console.error('Failed to embed image:', imgError);
+                  page.drawText(`🖼 ${fileName} (embed failed)`, { x: margin + 5, y: yPos, size: 9, font, color: rgb(0.8, 0.2, 0.2) });
+                  yPos -= lineHeight;
                 }
               }
             }
           }
         }
 
-        // Page number on first page of each expense
-        page.drawText(`Expense ${i + 1} of ${filteredExpenses.length}`, {
-          x: width - margin - 80,
-          y: margin - 20,
-          size: 8,
-          font,
-        });
+        drawFooter(page, i, filteredExpenses.length, expense.member_name);
       }
 
-      // Save PDF
+      // Save and download
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const link = document.createElement('a');
