@@ -85,7 +85,7 @@ def main():
             break
 
     # 2026-01: Add view_token for public expense viewing
-    add_column_if_not_exists(cursor, "expense_notes", "view_token", "VARCHAR(64) UNIQUE")
+    add_column_if_not_exists(cursor, "expense_notes", "view_token", "VARCHAR(64)")
 
     # Generate view tokens for existing rows that don't have one
     cursor.execute("SELECT id FROM expense_notes WHERE view_token IS NULL")
