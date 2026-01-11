@@ -1,278 +1,151 @@
-# Expense Notes Management System
+# Expense Notes
 
-A modern, full-stack expense note management system built with React and FastAPI.
+Expense claim system for 0x20 hackerspace. Members submit expenses via Mattermost, admins review and process payments.
 
 ## Features
 
-- **User-Facing Form**: Submit expense notes with receipt photos and digital signatures
-- **Admin Dashboard**: Review, approve/deny, and manage expense submissions
-- **Email Notifications**:
-  - Admin receives notification when new expense is submitted
-  - User receives notification when their expense is approved/denied
-- **Mobile-Optimized**: Responsive design with dark theme
-- **Secure**: JWT-based admin authentication, file upload validation
+- **Mattermost Integration**: `/expenses` command generates secure submission link
+- **Expense Submission**: Upload receipts (images/PDFs), add description, sign digitally
+- **Admin Dashboard**: Review, approve/deny, track payments
+- **PDF Export**: Generate reports with cover page, summaries, and embedded attachments
+- **Email Notifications**: Notify admins on submission, notify members on status change
+- **Dark Theme**: Modern, mobile-friendly interface
 
-## Tech Stack
-
-- **Frontend**: React 18 + Vite
-- **Backend**: Python FastAPI
-- **Database**: SQLite with SQLAlchemy ORM
-- **Email**: SMTP (configurable)
-
-## Design System
-
-- Background: rgb(17, 24, 39)
-- Card background: rgb(31, 41, 55)
-- Accent: rgb(255, 173, 179)
-- Borders: rgb(55, 65, 81)
-- Modern, minimalistic, spacious design
-
-## Quick Setup (Recommended)
-
-Use the provided shell scripts for easy setup:
+## Quick Start
 
 ```bash
-# Setup everything (backend + frontend)
+# 1. Setup
 ./setup-all.sh
 
-# Create admin user
-cd backend && python setup.py
+# 2. Configure backend/.env (required vars)
+ADMIN_PASSWORD=your-secure-password
+SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+ACCESS_TOKEN_PUBLIC_KEY=<from-hsg-bot>
+BOT_NOTIFY_URL=http://localhost:5000/notify
+BOT_NOTIFY_SECRET=shared-secret
 
-# Start both servers
+# 3. Run
 ./dev.sh
 ```
 
-That's it! The app will be running at:
 - Frontend: http://localhost:5173
-- Backend: http://localhost:8000
+- Backend API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
 
-## Manual Setup Instructions
+## Architecture
 
-### Backend Setup
+```
+┌─────────────┐     /expenses      ┌─────────────┐
+│  Mattermost │◄──────────────────►│   HSG Bot   │
+└─────────────┘                    └──────┬──────┘
+                                          │ signed token
+                                          ▼
+┌─────────────┐                    ┌─────────────┐
+│   Frontend  │◄──────────────────►│   Backend   │
+│  (React)    │      REST API      │  (FastAPI)  │
+└─────────────┘                    └──────┬──────┘
+                                          │
+                                          ▼
+                                   ┌─────────────┐
+                                   │   SQLite    │
+                                   └─────────────┘
+```
 
-1. **Navigate to backend directory**:
-   ```bash
-   cd backend
-   ```
+## Configuration
 
-2. **Create virtual environment and install dependencies with uv**:
-   ```bash
-   uv venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   uv pip install -r requirements.txt
-   ```
+### Required Environment Variables (`backend/.env`)
 
-4. **Configure environment**:
-   ```bash
-   cp .env.example .env
-   ```
+| Variable | Description |
+|----------|-------------|
+| `ADMIN_PASSWORD` | Password for admin login |
+| `SECRET_KEY` | JWT signing key (use `python3 -c "import secrets; print(secrets.token_hex(32))"`) |
+| `ACCESS_TOKEN_PUBLIC_KEY` | Ed25519 public key for verifying Mattermost tokens |
+| `BOT_NOTIFY_URL` | HSG bot endpoint for DM notifications |
+| `BOT_NOTIFY_SECRET` | Shared secret with HSG bot |
 
-   Edit `.env` and set:
-   - `SECRET_KEY`: Generate with `python -c "import secrets; print(secrets.token_hex(32))"`
-   - SMTP settings (optional, can configure later):
-     - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`
-     - `SMTP_FROM_EMAIL`, `ADMIN_EMAIL`
+### Optional Variables
 
-5. **Initialize database and create admin user**:
-   ```bash
-   python setup.py
-   ```
-   Follow the prompts to set an admin password.
-
-6. **Start the backend server**:
-   ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-   ```
-
-   The API will be available at `http://localhost:8000`
-   API documentation at `http://localhost:8000/docs`
-
-### Frontend Setup
-
-1. **Navigate to frontend directory**:
-   ```bash
-   cd frontend
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Configure environment**:
-   ```bash
-   cp .env.example .env
-   ```
-
-   Edit `.env` if your API URL differs from `http://localhost:8000`:
-   ```
-   VITE_API_URL=http://localhost:8000
-   ```
-
-4. **Start the development server**:
-   ```bash
-   npm run dev
-   ```
-
-   The app will be available at `http://localhost:5173`
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SMTP_HOST` | - | SMTP server for email notifications |
+| `SMTP_PORT` | 587 | SMTP port |
+| `SMTP_USER` | - | SMTP username |
+| `SMTP_PASSWORD` | - | SMTP password |
+| `SMTP_FROM_EMAIL` | - | Sender email address |
+| `ADMIN_EMAIL` | - | Admin notification recipient |
+| `FRONTEND_URL` | http://localhost:3000 | Frontend URL for CORS |
+| `MAX_FILE_SIZE` | 10485760 | Max upload size (10MB) |
+| `ACCESS_TOKEN_REQUIRED` | true | Require signed token for submissions |
 
 ## Usage
 
-### User Submission Flow
+### For Members
 
-1. Navigate to `http://localhost:5173`
-2. Fill in the expense form:
-   - Member name (required)
-   - Description (required)
-   - Amount in EUR (required)
-   - Email (required)
-   - Upload receipt photo (optional)
-   - Draw digital signature (optional)
-3. Submit the form
-4. Admin receives email notification
+1. Type `/expenses` in Mattermost
+2. Click the private link (valid for your user only)
+3. Fill in expense details, upload receipt photos
+4. Sign and submit
+5. Receive DM when expense is processed
 
-### Admin Dashboard
+### For Admins
 
-1. Navigate to `http://localhost:5173/admin`
-2. Enter admin password (set during setup)
-3. View all expense submissions
-4. Filter by status (all/pending/approved/denied)
-5. Click on an expense to view details
-6. Edit admin fields:
-   - Change status (pending/approved/denied)
-   - Mark as paid
-   - Set expense type (GERA or other)
-   - Set pay date
-   - Set payed from (KBC/Cash/Bar/Other)
-   - Set payed to
-   - Set financial responsible
-   - Add admin notes
-7. Save changes
-8. User receives email notification when status changes
+1. Go to `/admin` and login with `ADMIN_PASSWORD`
+2. Review pending expenses
+3. Update status (pending → paid/denied)
+4. Fill payment details (pay date, paid from/to, responsible)
+5. Export PDF reports by date range
 
 ## API Endpoints
 
-### Public Endpoints
-- `POST /api/expenses/` - Submit expense note
-- `GET /api/expenses/{id}` - Get expense details
+### Public
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/expenses/` | Submit expense (requires valid token) |
+| GET | `/api/expenses/view/{token}` | View expense by view token |
+| GET | `/api/expenses/view/{token}/photo/{file}` | Get photo by view token |
 
-### Admin Endpoints (require Bearer token)
-- `POST /api/admin/login` - Login
-- `GET /api/admin/expenses` - List expenses (optional status filter)
-- `GET /api/admin/expenses/{id}` - Get expense details
-- `PATCH /api/admin/expenses/{id}` - Update expense
-- `POST /api/admin/expenses/{id}/signature` - Upload financial signature
-- `GET /api/admin/files/{type}/{filename}` - View uploaded files
+### Admin (Bearer auth)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/admin/login` | Get JWT token |
+| GET | `/api/admin/expenses` | List expenses (filter: `?status=pending\|paid\|denied\|deleted`) |
+| PATCH | `/api/admin/expenses/{id}` | Update expense |
+| DELETE | `/api/admin/expenses/{id}` | Soft delete |
+| POST | `/api/admin/expenses/{id}/restore` | Restore deleted |
+| POST | `/api/admin/expenses/{id}/attachments` | Upload admin attachments |
+| DELETE | `/api/admin/expenses/{id}/photos/{file}` | Delete photo |
+| GET | `/api/admin/files/{type}/{file}` | Serve uploaded file |
 
-## Email Configuration
+## Docker Deployment
 
-To enable email notifications, configure the following in `backend/.env`:
-
-```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-SMTP_FROM_EMAIL=your-email@gmail.com
-SMTP_FROM_NAME=Expense Notes System
-ADMIN_EMAIL=admin@example.com
-```
-
-**For Gmail**: Use an [App Password](https://support.google.com/accounts/answer/185833) instead of your regular password.
-
-## File Uploads
-
-- **Allowed formats**: JPG, JPEG, PNG, PDF
-- **Max file size**: 10MB (configurable in `.env`)
-- **Storage location**: `backend/uploads/`
-
-## Security Features
-
-- Admin password hashed with bcrypt
-- JWT token-based authentication (expires after 8 hours)
-- File upload validation (type and size)
-- CORS restricted to frontend URL
-- SQL injection prevention via ORM
-- Input validation via Pydantic schemas
-
-## Shell Scripts Reference
-
-All scripts are executable and have built-in error checking.
-
-### Root Directory Scripts
-
-- **`./setup-all.sh`** - Setup both backend and frontend
-- **`./dev.sh`** - Start both servers (backend + frontend)
-- **`./start-backend.sh`** - Start backend only
-- **`./start-frontend.sh`** - Start frontend only
-
-### Backend Scripts (`backend/`)
-
-- **`./setup.sh`** - Create venv, install dependencies, generate SECRET_KEY
-- **`./start.sh`** - Start development server
-- **`./create-admin.sh`** - Create/reset admin user
-
-### Frontend Scripts (`frontend/`)
-
-- **`./setup.sh`** - Install npm dependencies, create .env
-- **`./start.sh`** - Start development server
-- **`./build.sh`** - Build for production
-
-## Development Workflows
-
-### First Time Setup
 ```bash
-./setup-all.sh
-cd backend && python setup.py  # Create admin user
-./dev.sh  # Start both servers
+docker compose up -d --build
 ```
 
-### Daily Development
+Expects `backend/.env` and `hsg-bot/.env` to be configured. Uses Traefik for routing.
+
+## Development
+
 ```bash
-./dev.sh  # Starts both backend and frontend
+# Both services
+./dev.sh
+
+# Individual
+./start-backend.sh   # Backend on :8000
+./start-frontend.sh  # Frontend on :5173
+
+# Database reset
+cd backend
+rm -rf data/expense_notes.db
+python -c "from app.database import init_db; init_db()"
 ```
 
-### Backend Only
-```bash
-./start-backend.sh
-```
+## Tech Stack
 
-### Frontend Only
-```bash
-./start-frontend.sh
-```
-
-### Production Build
-```bash
-cd frontend
-./build.sh
-```
-
-## Troubleshooting
-
-### Backend Issues
-
-**"ModuleNotFoundError"**: Ensure virtual environment is activated and dependencies are installed
-```bash
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
-uv pip install -r requirements.txt
-```
-
-**"SECRET_KEY not set"**: Generate and set SECRET_KEY in `.env`
-```bash
-python -c "import secrets; print(secrets.token_hex(32))"
-```
-
-### Frontend Issues
-
-**"Failed to fetch"**: Ensure backend is running and VITE_API_URL is correct
-
-**Missing dependencies**: Reinstall node modules
-```bash
-rm -rf node_modules package-lock.json
-npm install
-```
+- **Frontend**: React 18, Vite, pdf-lib, react-datepicker
+- **Backend**: FastAPI, SQLAlchemy, python-jose
+- **Bot**: Flask, Ed25519 signing
+- **Database**: SQLite
 
 ## Project Structure
 
@@ -280,36 +153,33 @@ npm install
 expense-notes/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py              # FastAPI app
-│   │   ├── config.py            # Configuration
-│   │   ├── database.py          # Database setup
-│   │   ├── models.py            # SQLAlchemy models
-│   │   ├── schemas.py           # Pydantic schemas
-│   │   ├── crud.py              # Database operations
-│   │   ├── auth.py              # Authentication
-│   │   ├── email_service.py     # Email notifications
+│   │   ├── main.py           # FastAPI app
+│   │   ├── config.py         # Settings from env
+│   │   ├── database.py       # SQLAlchemy setup
+│   │   ├── models.py         # DB models
+│   │   ├── schemas.py        # Pydantic schemas
+│   │   ├── crud.py           # DB operations
+│   │   ├── auth.py           # JWT auth
+│   │   ├── email_service.py  # SMTP notifications
+│   │   ├── bot_notification.py
 │   │   └── routers/
-│   │       ├── expenses.py      # Public API
-│   │       └── admin.py         # Admin API
-│   ├── setup.py                 # Admin creation script
-│   └── requirements.txt
-│
-└── frontend/
-    ├── src/
-    │   ├── App.jsx              # Main app
-    │   ├── components/
-    │   │   ├── ExpenseForm.jsx
-    │   │   ├── SignatureCanvas.jsx
-    │   │   ├── AdminLogin.jsx
-    │   │   ├── AdminDashboard.jsx
-    │   │   ├── ExpenseList.jsx
-    │   │   ├── ExpenseDetails.jsx
-    │   │   └── PhotoViewer.jsx
-    │   └── services/
-    │       └── api.js           # API client
-    └── package.json
+│   │       ├── expenses.py   # Public API
+│   │       └── admin.py      # Admin API
+│   ├── uploads/              # File storage
+│   └── data/                 # SQLite DB
+├── frontend/
+│   └── src/
+│       ├── components/
+│       │   ├── ExpenseForm.jsx
+│       │   ├── AdminDashboard.jsx  # Includes PDF export
+│       │   ├── ExpenseList.jsx
+│       │   ├── ExpenseDetails.jsx
+│       │   └── PhotoGallery.jsx
+│       └── services/api.js
+├── hsg-bot/
+│   ├── app.py                # Flask bot
+│   ├── commands/             # Slash command handlers
+│   └── services/             # Mattermost API, token signing
+├── docker-compose.yml
+└── CLAUDE.md                 # AI assistant context
 ```
-
-## License
-
-Private project for 0x20
