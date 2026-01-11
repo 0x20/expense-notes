@@ -130,8 +130,12 @@ const AdminDashboard = ({ onLogout }) => {
         return lines;
       };
 
-      // Helper: safe string (prevent null errors)
-      const safe = (val) => val ?? '';
+      // Helper: safe string (prevent null errors and strip emojis/unsupported chars)
+      const safe = (val) => {
+        if (!val) return '';
+        // Remove emojis and other non-WinAnsi characters (pdf-lib limitation)
+        return String(val).replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/gu, '');
+      };
 
       // Helper: draw page footer
       const drawFooter = (page, expenseIndex, totalExpenses, memberName) => {
@@ -239,7 +243,7 @@ const AdminDashboard = ({ onLogout }) => {
         yPos -= 20;
 
         // Description with wrapping
-        const descLines = wrapText(expense.description || '', contentWidth, 10);
+        const descLines = wrapText(safe(expense.description), contentWidth, 10);
         for (const line of descLines) {
           page.drawText(line, { x: margin, y: yPos, size: 10, font });
           yPos -= lineHeight;
@@ -283,7 +287,7 @@ const AdminDashboard = ({ onLogout }) => {
           if (expense.admin_notes) {
             yPos -= 5;
             page.drawText('Notes: ', { x: margin, y: yPos, size: 9, font: fontBold, color: gray });
-            const notesLines = wrapText(expense.admin_notes, contentWidth - 40, 9);
+            const notesLines = wrapText(safe(expense.admin_notes), contentWidth - 40, 9);
             const notesLabelWidth = font.widthOfTextAtSize('Notes: ', 9);
             page.drawText(notesLines[0] || '', { x: margin + notesLabelWidth, y: yPos, size: 9, font });
             yPos -= lineHeight;
