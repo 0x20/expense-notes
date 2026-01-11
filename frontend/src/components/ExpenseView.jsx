@@ -117,6 +117,46 @@ const ExpenseView = () => {
           </div>
         )}
 
+        {expense.photo_paths && (
+          <div style={styles.photosSection}>
+            <span style={styles.label}>Receipt Photos</span>
+            <div style={styles.photoGrid}>
+              {expense.photo_paths.split(',').map((path, idx) => {
+                const photoUrl = `${apiUrl}/uploads/${path}`;
+                const isPdf = path.toLowerCase().endsWith('.pdf');
+
+                return isPdf ? (
+                  <a
+                    key={idx}
+                    href={photoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={styles.pdfLink}
+                  >
+                    <div style={styles.pdfPreview}>
+                      <span style={styles.pdfIcon}>📄</span>
+                      <span style={styles.pdfLabel}>PDF Document</span>
+                    </div>
+                  </a>
+                ) : (
+                  <a
+                    key={idx}
+                    href={photoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <img
+                      src={photoUrl}
+                      alt={`Receipt ${idx + 1}`}
+                      style={styles.photo}
+                    />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <p style={styles.footer}>
           This is a private link. Only share it with people who need to see this expense.
         </p>
@@ -207,6 +247,46 @@ const styles = {
     color: 'rgb(107, 114, 128)',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  photosSection: {
+    marginTop: '1.5rem',
+  },
+  photoGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+    gap: '0.75rem',
+    marginTop: '0.5rem',
+  },
+  photo: {
+    width: '100%',
+    height: '150px',
+    objectFit: 'cover',
+    borderRadius: '0.375rem',
+    border: '1px solid rgb(55, 65, 81)',
+    cursor: 'pointer',
+  },
+  pdfLink: {
+    textDecoration: 'none',
+  },
+  pdfPreview: {
+    width: '100%',
+    height: '150px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgb(17, 24, 39)',
+    border: '2px dashed rgb(255, 173, 179)',
+    borderRadius: '0.375rem',
+    cursor: 'pointer',
+  },
+  pdfIcon: {
+    fontSize: '2rem',
+    marginBottom: '0.5rem',
+  },
+  pdfLabel: {
+    fontSize: '0.75rem',
+    color: 'rgb(156, 163, 175)',
   },
 };
 
