@@ -12,7 +12,7 @@ services:
       - ./backend/uploads:/app/uploads
     labels:
       - traefik.enable=true
-      - traefik.http.routers.expense-backend.rule=Host(`expenses.hackerspace.gent`) && (PathPrefix(`/api`) || PathPrefix(`/uploads`) || PathPrefix(`/docs`) || PathPrefix(`/openapi.json`))
+      - traefik.http.routers.expense-backend.rule=Host(`expenses.hackerspace.gent`) && (PathPrefix(`/api`) || PathPrefix(`/docs`) || PathPrefix(`/openapi.json`))
       - traefik.http.routers.expense-backend.priority=100
       - traefik.http.routers.expense-backend.entrypoints=public
       - traefik.http.routers.expense-backend.tls=true

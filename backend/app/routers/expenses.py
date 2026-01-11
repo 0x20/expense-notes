@@ -185,3 +185,46 @@ async def view_expense_by_token(
         "created_at": expense.created_at.isoformat() if expense.created_at else None,
         "pay_date": expense.pay_date.isoformat() if expense.pay_date else None,
     }
+
+@router.get("/view/{view_token}/photo/{filename}")
+async def get_photo_by_view_token(
+    view_token: str,
+    filename: str,
+    db: Session = Depends(get_db)
+):
+    """Serve photo for an expense via view token"""
+    from ..models import ExpenseNote
+    from fastapi.responses import FileResponse
+
+    # Verify view token
+    expense = db.query(ExpenseNote).filter(
+        ExpenseNote.view_token == view_token,
+        ExpenseNote.deleted == False
+    ).first()
+
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+
+    # Verify the photo belongs to this expense
+    if not expense.photo_paths:
+        raise HTTPException(status_code=404, detail="No photos for this expense")
+
+    photo_list = expense.photo_paths.split(',')
+    # Normalize paths (remove any directory prefixes from filename param)
+    normalized_filename = filename.replace('photos/', '')
+
+    matching_photo = None
+    for photo_path in photo_list:
+        if photo_path.endswith(normalized_filename) or photo_path == f"photos/{normalized_filename}":
+            matching_photo = photo_path
+            break
+
+    if not matching_photo:
+        raise HTTPException(status_code=403, detail="Photo not associated with this expense")
+
+    # Serve the file
+    file_path = os.path.join(settings.UPLOAD_DIR, matching_photo)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Photo file not found")
+
+    return FileResponse(file_path)

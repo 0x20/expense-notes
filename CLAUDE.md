@@ -104,6 +104,8 @@ Mattermost bot for secure expense link generation and notifications:
 
 **Public routes** (`/api/expenses/`):
 - POST `/` - Submit expense (multipart with photos/signature)
+- GET `/view/{view_token}` - View expense details by secret token (for submitters)
+- GET `/view/{view_token}/photo/{filename}` - Serve photo protected by view token
 
 **Admin routes** (`/api/admin/`, requires Bearer token):
 - POST `/login` - Get JWT token
@@ -113,8 +115,9 @@ Mattermost bot for secure expense link generation and notifications:
 - DELETE `/expenses/{id}/photos/{filename}` - Delete specific photo
 - DELETE `/expenses/{id}` - Soft delete (sets deleted=True)
 - POST `/expenses/{id}/restore` - Restore deleted expense
+- GET `/files/{file_type}/{filename}` - Serve uploaded files (admin only)
 
-**File serving**: `/uploads/{photos,signatures,attachments}/{filename}` - Public read access (no auth)
+**File serving**: All uploads require authentication. Public view uses view_token-protected photo endpoint. Admin uses admin-authenticated file endpoint.
 
 ### Design System (Strictly Followed)
 

@@ -122,7 +122,9 @@ const ExpenseView = () => {
             <span style={styles.label}>Receipt Photos</span>
             <div style={styles.photoGrid}>
               {expense.photo_paths.split(',').map((path, idx) => {
-                const photoUrl = `${apiUrl}/uploads/${path}`;
+                // Extract filename from path (e.g., "photos/20240101_120000_receipt.jpg" -> "20240101_120000_receipt.jpg")
+                const filename = path.split('/').pop();
+                const photoUrl = `${apiUrl}/api/expenses/view/${token}/photo/${filename}`;
                 const isPdf = path.toLowerCase().endsWith('.pdf');
 
                 return isPdf ? (
