@@ -44,6 +44,9 @@ class ExpenseNote(Base):
     admin_notes = Column(Text, nullable=True)
     deleted = Column(Boolean, default=False)
 
+# DEPRECATED: AdminUser table no longer used
+# Auth now uses ADMIN_PASSWORD env var directly
+# Table kept for backward compatibility with existing databases
 class AdminUser(Base):
     __tablename__ = "admin_users"
 

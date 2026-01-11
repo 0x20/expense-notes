@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from sqlalchemy.exc import SQLAlchemyError
 from typing import List, Optional
-from .models import ExpenseNote, AdminUser
+from .models import ExpenseNote
 from .schemas import ExpenseNoteCreate, ExpenseNoteUpdate
 
 logger = logging.getLogger(__name__)
@@ -106,25 +106,5 @@ def update_expense_file_paths(
         return db_expense
     except SQLAlchemyError as e:
         logger.error(f"Failed to update file paths for expense {expense_id}: {e}")
-        db.rollback()
-        raise
-
-def get_admin_user(db: Session) -> Optional[AdminUser]:
-    try:
-        return db.query(AdminUser).first()
-    except SQLAlchemyError as e:
-        logger.error(f"Failed to get admin user: {e}")
-        raise
-
-
-def create_admin_user(db: Session, password_hash: str) -> AdminUser:
-    try:
-        admin = AdminUser(password_hash=password_hash)
-        db.add(admin)
-        db.commit()
-        db.refresh(admin)
-        return admin
-    except SQLAlchemyError as e:
-        logger.error(f"Failed to create admin user: {e}")
         db.rollback()
         raise

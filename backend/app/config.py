@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: Optional[str] = None
     SMTP_FROM_NAME: str = "Expense Notes System"
     ADMIN_EMAIL: Optional[str] = None
-    ADMIN_PASSWORD: Optional[str] = None  # Initial admin password (used on first startup)
+    ADMIN_PASSWORD: str  # Required: admin login password
 
     MAX_FILE_SIZE: int = 10485760  # 10MB
     UPLOAD_DIR: str = "./uploads"
@@ -41,6 +41,8 @@ class Settings(BaseSettings):
             missing.append('BOT_NOTIFY_URL')
         if not self.BOT_NOTIFY_SECRET:
             missing.append('BOT_NOTIFY_SECRET')
+        if not self.ADMIN_PASSWORD:
+            missing.append('ADMIN_PASSWORD')
         if missing:
             print(f"FATAL: Missing required environment variables: {', '.join(missing)}", file=sys.stderr)
             print("Add these to backend/.env", file=sys.stderr)

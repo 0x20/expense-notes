@@ -14,7 +14,7 @@ from ..schemas import (
 )
 from ..crud import (
     get_all_expense_notes, get_expense_note, update_expense_note,
-    update_expense_file_paths, get_admin_user
+    update_expense_file_paths
 )
 from ..auth import authenticate_admin, create_access_token, get_current_admin
 from ..email_service import EmailService
@@ -28,16 +28,15 @@ limiter = Limiter(key_func=get_remote_address)
 
 @router.post("/login", response_model=Token)
 @limiter.limit("5/minute")
-async def admin_login(request: Request, login_data: AdminLogin, db: Session = Depends(get_db)):
-    """Admin login endpoint"""
-    if not authenticate_admin(db, login_data.password):
+async def admin_login(request: Request, login_data: AdminLogin):
+    """Admin login endpoint - validates password from env var"""
+    if not authenticate_admin(login_data.password):
         logger.warning(f"Failed admin login attempt from {request.client.host}")
         raise HTTPException(status_code=401, detail="Invalid password")
 
-    admin = get_admin_user(db)
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": admin.id}, expires_delta=access_token_expires
+        data={"sub": "admin"}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 

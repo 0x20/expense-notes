@@ -11,7 +11,7 @@ A full-stack expense note management system where club members submit expense cl
 ### Quick Start (First Time)
 ```bash
 ./setup-all.sh              # Setup backend + frontend
-cd backend && python setup.py  # Create admin user (prompts for password)
+# Ensure ADMIN_PASSWORD is set in backend/.env
 ./dev.sh                    # Start both servers
 ```
 
@@ -30,7 +30,7 @@ cd backend && python setup.py  # Create admin user (prompts for password)
 ```bash
 source .venv/bin/activate   # Activate venv
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-python setup.py             # Create/reset admin user
+# No setup.py needed - admin auth uses ADMIN_PASSWORD env var
 ```
 
 ### Frontend (from frontend/)
@@ -45,7 +45,7 @@ The database auto-initializes on first run. To manually recreate:
 cd backend
 rm -rf data/expense_notes.db
 python -c "from app.database import init_db; init_db()"
-python setup.py  # Recreate admin
+# No admin user setup needed - uses ADMIN_PASSWORD env var
 ```
 
 ### Database Migrations
@@ -69,7 +69,7 @@ Add new migrations to `backend/migrate.py`. The script is idempotent (safe to ru
 
 **File Storage**: All uploads go to `backend/uploads/{photos,signatures,attachments}/` with timestamp-prefixed filenames. Paths stored comma-separated in DB text fields (`photo_paths`, `attachment_paths`).
 
-**Authentication**: Single admin user with bcrypt-hashed password. JWT tokens (8hr expiry) stored in localStorage, added to requests via axios interceptor in `frontend/src/services/api.js`.
+**Authentication**: Admin password stored in `ADMIN_PASSWORD` env var (required). JWT tokens (8hr expiry) stored in localStorage, added to requests via axios interceptor in `frontend/src/services/api.js`. No database storage of credentials.
 
 ### Data Model
 
@@ -201,7 +201,7 @@ Email service in `backend/app/email_service.py` uses aiosmtplib. Fails silently 
 - `app/routers/expenses.py` - Public submission endpoint, file upload helper
 - `app/crud.py` - Database queries with soft delete filtering
 - `app/models.py` - SQLAlchemy schemas (note: has deprecated fields)
-- `app/auth.py` - JWT token creation/validation, password hashing
+- `app/auth.py` - JWT token creation/validation, env-based password check
 
 **Frontend critical files**:
 - `src/components/AdminDashboard.jsx` - Main admin view, handles PDF export
