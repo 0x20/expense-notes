@@ -332,8 +332,7 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
 
 const styles = {
   container: {
-    minHeight: '100vh',
-    minHeight: '100dvh', // Dynamic viewport height for mobile
+    minHeight: '100dvh', // Dynamic viewport height for mobile, falls back to 100vh
     padding: '0',
     display: 'flex',
     justifyContent: 'center',

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import ExpenseForm from './components/ExpenseForm';
 import ExpenseView from './components/ExpenseView';
 import AdminLogin from './components/AdminLogin';
-import AdminDashboard from './components/AdminDashboard';
+
+// Lazy load admin dashboard (contains pdf-lib which is large)
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 
 // Decode username from Ed25519 signed token (base64url(signature + payload))
 function decodeTokenUsername(token) {
@@ -75,7 +77,9 @@ function AppContent() {
         path="/admin/dashboard"
         element={
           isAdminAuthenticated ? (
-            <AdminDashboard onLogout={handleLogout} />
+            <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: 'rgb(156, 163, 175)' }}>Loading...</div>}>
+              <AdminDashboard onLogout={handleLogout} />
+            </Suspense>
           ) : (
             <Navigate to="/admin" replace />
           )
