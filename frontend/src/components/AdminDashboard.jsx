@@ -130,10 +130,13 @@ const AdminDashboard = ({ onLogout }) => {
         return lines;
       };
 
+      // Helper: safe string (prevent null errors)
+      const safe = (val) => val ?? '';
+
       // Helper: draw page footer
       const drawFooter = (page, expenseIndex, totalExpenses, memberName) => {
         const { width } = page.getSize();
-        page.drawText(`Expense ${expenseIndex + 1}/${totalExpenses} — ${memberName}`, {
+        page.drawText(`Expense ${expenseIndex + 1}/${totalExpenses} — ${safe(memberName)}`, {
           x: margin,
           y: 20,
           size: 8,
@@ -199,7 +202,7 @@ const AdminDashboard = ({ onLogout }) => {
           page = pdfDoc.addPage();
           yPos = height - margin;
         }
-        const tocLine = `${i + 1}. ${e.member_name} — €${parseFloat(e.amount).toFixed(2)} — ${e.status}`;
+        const tocLine = `${i + 1}. ${safe(e.member_name)} — €${parseFloat(e.amount || 0).toFixed(2)} — ${safe(e.status)}`;
         page.drawText(tocLine, { x: margin + 10, y: yPos, size: 9, font });
         yPos -= 14;
       }
@@ -222,14 +225,14 @@ const AdminDashboard = ({ onLogout }) => {
         yPos -= 20;
 
         // Title row: name + amount
-        page.drawText(expense.member_name, { x: margin, y: yPos, size: 14, font: fontBold });
-        const amountText = `€${parseFloat(expense.amount).toFixed(2)}`;
+        page.drawText(safe(expense.member_name), { x: margin, y: yPos, size: 14, font: fontBold });
+        const amountText = `€${parseFloat(expense.amount || 0).toFixed(2)}`;
         const amountWidth = fontBold.widthOfTextAtSize(amountText, 14);
         page.drawText(amountText, { x: width - margin - amountWidth, y: yPos, size: 14, font: fontBold });
         yPos -= 16;
 
         // Subtitle row: email + date
-        page.drawText(expense.member_email, { x: margin, y: yPos, size: 9, font, color: gray });
+        page.drawText(safe(expense.member_email), { x: margin, y: yPos, size: 9, font, color: gray });
         const dateText = format(new Date(expense.date_entered), 'yyyy/MM/dd');
         const dateWidth = font.widthOfTextAtSize(dateText, 9);
         page.drawText(dateText, { x: width - margin - dateWidth, y: yPos, size: 9, font, color: gray });
@@ -250,7 +253,7 @@ const AdminDashboard = ({ onLogout }) => {
           denied: rgb(0.8, 0.2, 0.2),
         };
         const statusColor = statusColors[expense.status] || black;
-        page.drawText(expense.status.toUpperCase(), { x: margin, y: yPos, size: 10, font: fontBold, color: statusColor });
+        page.drawText(safe(expense.status).toUpperCase(), { x: margin, y: yPos, size: 10, font: fontBold, color: statusColor });
         yPos -= 18;
 
         // Admin details (condensed, two-column where possible)
@@ -266,12 +269,12 @@ const AdminDashboard = ({ onLogout }) => {
           for (let j = 0; j < adminFields.length; j += 2) {
             const [label1, value1] = adminFields[j];
             page.drawText(`${label1}: `, { x: margin, y: yPos, size: 9, font: fontBold, color: gray });
-            page.drawText(value1, { x: margin + font.widthOfTextAtSize(`${label1}: `, 9), y: yPos, size: 9, font });
+            page.drawText(safe(value1), { x: margin + font.widthOfTextAtSize(`${label1}: `, 9), y: yPos, size: 9, font });
 
             if (adminFields[j + 1]) {
               const [label2, value2] = adminFields[j + 1];
               page.drawText(`${label2}: `, { x: margin + colWidth, y: yPos, size: 9, font: fontBold, color: gray });
-              page.drawText(value2, { x: margin + colWidth + font.widthOfTextAtSize(`${label2}: `, 9), y: yPos, size: 9, font });
+              page.drawText(safe(value2), { x: margin + colWidth + font.widthOfTextAtSize(`${label2}: `, 9), y: yPos, size: 9, font });
             }
             yPos -= lineHeight;
           }
