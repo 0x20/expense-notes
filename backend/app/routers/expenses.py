@@ -176,7 +176,7 @@ async def view_expense_by_token(
     return {
         "id": expense.id,
         "status": expense.status,
-        "member_name": expense.member_name,
+        "member_name": expense.member_name or expense.mattermost_username,
         "description": expense.description,
         "amount": float(expense.amount),
         "date_entered": expense.date_entered.isoformat() if expense.date_entered else None,
