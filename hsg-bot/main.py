@@ -42,7 +42,15 @@ async def slash_expenses(request: Request):
     username = form.get('user_name', 'unknown')
     text = form.get('text', '')
 
-    response = handle_expenses(username, text)
+    response, dm_message = handle_expenses(username, text)
+
+    # Send DM as backup for mobile users
+    if dm_message:
+        try:
+            send_dm_to_username(username, dm_message)
+        except Exception as e:
+            logger.warning(f"Failed to send DM to {username}: {e}")
+
     return JSONResponse(response)
 
 
