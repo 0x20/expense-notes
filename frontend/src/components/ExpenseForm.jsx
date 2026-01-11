@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { expenseAPI } from '../services/api';
 
 const ExpenseForm = ({ accessToken, mattermostUsername }) => {
@@ -15,7 +15,9 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
 
-  // Check if we need an access token (production mode)
+  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+
   const isDevelopment = import.meta.env.DEV;
 
   const handleInputChange = (e) => {
@@ -25,10 +27,17 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
     });
   };
 
-  const handlePhotoChange = (e) => {
+  const handleFileSelect = (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      setPhotos(Array.from(e.target.files));
+      const newFiles = Array.from(e.target.files);
+      setPhotos(prev => [...prev, ...newFiles]);
     }
+    // Reset input so same file can be selected again
+    e.target.value = '';
+  };
+
+  const removePhoto = (index) => {
+    setPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -47,7 +56,6 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
         submitData.append('iban', formData.iban);
       }
 
-      // Append all photos
       if (photos.length > 0) {
         photos.forEach(photo => {
           submitData.append('photos', photo);
@@ -57,7 +65,6 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
       await expenseAPI.submitExpense(submitData, accessToken);
 
       setSuccess(true);
-      // Reset form
       setFormData({
         member_name: '',
         description: '',
@@ -74,15 +81,13 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
     }
   };
 
-  // Show access required message if no token in production
   if (!isDevelopment && !accessToken) {
     return (
       <div style={styles.container}>
         <div style={styles.card}>
           <h1 style={styles.title}>Access Required</h1>
           <div style={styles.errorMessage}>
-            You need a valid access link to submit an expense.
-            Please contact your admin or use the Mattermost bot to get an access link.
+            Use the <strong>/expenses</strong> command in Mattermost to get your personal submission link.
           </div>
         </div>
       </div>
@@ -92,11 +97,11 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h1 style={styles.title}>Submit Expense Note</h1>
+        <h1 style={styles.title}>Submit Expense</h1>
 
         {mattermostUsername && (
           <div style={styles.usernameDisplay}>
-            Submitting as: <strong>@{mattermostUsername}</strong>
+            Submitting as <strong>@{mattermostUsername}</strong>
           </div>
         )}
 
@@ -104,151 +109,221 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
           <div style={styles.errorMessage}>{error}</div>
         )}
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Payment Method *</label>
-            <select
-              name="payment_method"
-              value={formData.payment_method}
-              onChange={handleInputChange}
-              style={styles.select}
+        {success ? (
+          <div style={styles.successCard}>
+            <div style={styles.successIcon}>✓</div>
+            <h2 style={styles.successTitle}>Expense Submitted</h2>
+            <p style={styles.successText}>
+              You'll receive a DM when it's been processed.
+            </p>
+            <button
+              onClick={() => setSuccess(false)}
+              style={styles.newExpenseButton}
             >
-              <option value="iban">IBAN / Bank Transfer</option>
-              <option value="cash">Cash</option>
-              <option value="bar">Bar Tab</option>
-            </select>
+              Submit Another
+            </button>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={styles.form}>
+            {/* Payment Method */}
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Payment Method</label>
+              <div style={styles.segmentedControl}>
+                {[
+                  { value: 'iban', label: 'Bank Transfer' },
+                  { value: 'cash', label: 'Cash' },
+                  { value: 'bar', label: 'Bar Tab' }
+                ].map(option => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, payment_method: option.value })}
+                    style={{
+                      ...styles.segmentButton,
+                      ...(formData.payment_method === option.value ? styles.segmentButtonActive : {})
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {formData.payment_method === 'iban' && (
-            <>
+            {/* Conditional fields based on payment method */}
+            {formData.payment_method === 'iban' && (
+              <>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Account Holder Name</label>
+                  <input
+                    type="text"
+                    name="member_name"
+                    value={formData.member_name}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Name on bank account"
+                    style={styles.input}
+                    autoComplete="name"
+                  />
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>IBAN</label>
+                  <input
+                    type="text"
+                    name="iban"
+                    value={formData.iban}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="BE00 0000 0000 0000"
+                    style={styles.input}
+                    autoComplete="off"
+                  />
+                </div>
+              </>
+            )}
+
+            {formData.payment_method === 'bar' && (
               <div style={styles.formGroup}>
-                <label style={styles.label}>Account Holder Name *</label>
+                <label style={styles.label}>Bar Tab Name</label>
                 <input
                   type="text"
                   name="member_name"
                   value={formData.member_name}
                   onChange={handleInputChange}
                   required
-                  placeholder="Name as it appears on bank account"
+                  placeholder="Name the tab is under"
                   style={styles.input}
                 />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.label}>IBAN *</label>
-                <input
-                  type="text"
-                  name="iban"
-                  value={formData.iban}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="BE00 0000 0000 0000"
-                  style={styles.input}
-                />
-              </div>
-            </>
-          )}
-
-          {formData.payment_method === 'bar' && (
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Bar Tab Name *</label>
-              <input
-                type="text"
-                name="member_name"
-                value={formData.member_name}
-                onChange={handleInputChange}
-                required
-                placeholder="Name the tab is under"
-                style={styles.input}
-              />
-            </div>
-          )}
-
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Date Entered</label>
-            <input
-              type="text"
-              value={new Date().toLocaleDateString()}
-              disabled
-              style={{...styles.input, ...styles.inputDisabled}}
-            />
-          </div>
-
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Description *</label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              required
-              rows="4"
-              style={{...styles.input, ...styles.textarea}}
-            />
-          </div>
-
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Amount (EUR) *</label>
-            <input
-              type="number"
-              name="amount"
-              value={formData.amount}
-              onChange={handleInputChange}
-              step="0.01"
-              min="0"
-              required
-              style={styles.input}
-            />
-          </div>
-
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Email *</label>
-            <input
-              type="email"
-              name="member_email"
-              value={formData.member_email}
-              onChange={handleInputChange}
-              required
-              style={styles.input}
-            />
-          </div>
-
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Upload Receipt Photos</label>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handlePhotoChange}
-              style={styles.fileInput}
-            />
-            {photos.length > 0 && (
-              <div style={styles.fileList}>
-                {photos.map((photo, index) => (
-                  <div key={index} style={styles.fileName}>
-                    {index + 1}. {photo.name}
-                  </div>
-                ))}
               </div>
             )}
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              ...styles.button,
-              ...(loading ? styles.buttonDisabled : {})
-            }}
-          >
-            {loading ? 'Submitting...' : 'Submit Expense'}
-          </button>
-
-          {success && (
-            <div style={styles.successMessage}>
-              Expense submitted successfully! You will receive an email confirmation.
+            {/* Amount - prominent on mobile */}
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Amount (EUR)</label>
+              <div style={styles.amountWrapper}>
+                <span style={styles.currencySymbol}>€</span>
+                <input
+                  type="number"
+                  name="amount"
+                  value={formData.amount}
+                  onChange={handleInputChange}
+                  step="0.01"
+                  min="0"
+                  required
+                  placeholder="0.00"
+                  style={styles.amountInput}
+                  inputMode="decimal"
+                />
+              </div>
             </div>
-          )}
-        </form>
+
+            {/* Description */}
+            <div style={styles.formGroup}>
+              <label style={styles.label}>What's this for?</label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                required
+                rows="3"
+                placeholder="e.g., Pizza for workshop, Soldering supplies..."
+                style={styles.textarea}
+              />
+            </div>
+
+            {/* Email */}
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Email</label>
+              <input
+                type="email"
+                name="member_email"
+                value={formData.member_email}
+                onChange={handleInputChange}
+                required
+                placeholder="your@email.com"
+                style={styles.input}
+                autoComplete="email"
+                inputMode="email"
+              />
+            </div>
+
+            {/* Photo Upload - Mobile optimized */}
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Receipt Photos</label>
+
+              {/* Photo previews */}
+              {photos.length > 0 && (
+                <div style={styles.photoGrid}>
+                  {photos.map((photo, index) => (
+                    <div key={index} style={styles.photoPreview}>
+                      <img
+                        src={URL.createObjectURL(photo)}
+                        alt={`Receipt ${index + 1}`}
+                        style={styles.previewImage}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(index)}
+                        style={styles.removePhotoButton}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload buttons */}
+              <div style={styles.uploadButtons}>
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  style={styles.uploadButton}
+                >
+                  <span style={styles.uploadIcon}>📷</span>
+                  <span>Take Photo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={styles.uploadButton}
+                >
+                  <span style={styles.uploadIcon}>📁</span>
+                  <span>Choose File</span>
+                </button>
+              </div>
+
+              {/* Hidden file inputs */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,.pdf"
+                multiple
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+              />
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                ...styles.submitButton,
+                ...(loading ? styles.submitButtonDisabled : {})
+              }}
+            >
+              {loading ? 'Submitting...' : 'Submit Expense'}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -257,38 +332,40 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
 const styles = {
   container: {
     minHeight: '100vh',
-    padding: '2rem 1rem',
+    padding: '1rem',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'flex-start',
   },
   card: {
     backgroundColor: 'rgb(31, 41, 55)',
-    borderRadius: '0.75rem',
-    padding: '2rem',
-    maxWidth: '600px',
+    borderRadius: '1rem',
+    padding: '1.5rem',
+    maxWidth: '500px',
     width: '100%',
     border: '1px solid rgb(55, 65, 81)',
   },
   title: {
-    fontSize: '2rem',
+    fontSize: '1.5rem',
     fontWeight: '600',
     marginBottom: '1rem',
     color: 'rgb(255, 173, 179)',
+    textAlign: 'center',
   },
   usernameDisplay: {
-    padding: '0.75rem 1rem',
+    padding: '0.75rem',
     backgroundColor: 'rgba(255, 173, 179, 0.1)',
     border: '1px solid rgba(255, 173, 179, 0.3)',
-    borderRadius: '0.375rem',
+    borderRadius: '0.5rem',
     color: 'rgb(243, 244, 246)',
     marginBottom: '1.5rem',
     fontSize: '0.875rem',
+    textAlign: 'center',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '1.5rem',
+    gap: '1.25rem',
   },
   formGroup: {
     display: 'flex',
@@ -298,83 +375,199 @@ const styles = {
   label: {
     fontSize: '0.875rem',
     fontWeight: '500',
-    color: 'rgb(243, 244, 246)',
+    color: 'rgb(156, 163, 175)',
   },
   input: {
-    padding: '0.75rem',
+    padding: '0.875rem',
     backgroundColor: 'rgb(17, 24, 39)',
     border: '1px solid rgb(55, 65, 81)',
-    borderRadius: '0.375rem',
+    borderRadius: '0.5rem',
     color: 'rgb(243, 244, 246)',
     fontSize: '1rem',
     outline: 'none',
-    transition: 'border-color 0.2s',
-  },
-  inputDisabled: {
-    opacity: 0.6,
-    cursor: 'not-allowed',
-  },
-  select: {
-    padding: '0.75rem',
-    backgroundColor: 'rgb(17, 24, 39)',
-    border: '1px solid rgb(55, 65, 81)',
-    borderRadius: '0.375rem',
-    color: 'rgb(243, 244, 246)',
-    fontSize: '1rem',
-    cursor: 'pointer',
+    WebkitAppearance: 'none',
+    minHeight: '48px',
   },
   textarea: {
-    resize: 'vertical',
-    minHeight: '100px',
-  },
-  fileInput: {
-    padding: '0.5rem',
+    padding: '0.875rem',
     backgroundColor: 'rgb(17, 24, 39)',
     border: '1px solid rgb(55, 65, 81)',
-    borderRadius: '0.375rem',
+    borderRadius: '0.5rem',
     color: 'rgb(243, 244, 246)',
-    cursor: 'pointer',
+    fontSize: '1rem',
+    outline: 'none',
+    resize: 'vertical',
+    minHeight: '80px',
+    fontFamily: 'inherit',
   },
-  fileList: {
-    marginTop: '0.5rem',
+  segmentedControl: {
+    display: 'flex',
+    gap: '0.5rem',
+  },
+  segmentButton: {
+    flex: 1,
+    padding: '0.75rem 0.5rem',
+    backgroundColor: 'rgb(17, 24, 39)',
+    border: '1px solid rgb(55, 65, 81)',
+    borderRadius: '0.5rem',
+    color: 'rgb(156, 163, 175)',
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    minHeight: '48px',
+    transition: 'all 0.2s',
+  },
+  segmentButtonActive: {
+    backgroundColor: 'rgb(255, 173, 179)',
+    borderColor: 'rgb(255, 173, 179)',
+    color: 'rgb(17, 24, 39)',
+    fontWeight: '600',
+  },
+  amountWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    backgroundColor: 'rgb(17, 24, 39)',
+    border: '1px solid rgb(55, 65, 81)',
+    borderRadius: '0.5rem',
+    overflow: 'hidden',
+  },
+  currencySymbol: {
+    padding: '0.875rem',
+    color: 'rgb(156, 163, 175)',
+    fontSize: '1.25rem',
+    fontWeight: '600',
+    backgroundColor: 'rgb(31, 41, 55)',
+    borderRight: '1px solid rgb(55, 65, 81)',
+  },
+  amountInput: {
+    flex: 1,
+    padding: '0.875rem',
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: 'rgb(243, 244, 246)',
+    fontSize: '1.25rem',
+    fontWeight: '600',
+    outline: 'none',
+    minHeight: '48px',
+    WebkitAppearance: 'none',
+  },
+  photoGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '0.5rem',
+    marginBottom: '0.75rem',
+  },
+  photoPreview: {
+    position: 'relative',
+    aspectRatio: '1',
+    borderRadius: '0.5rem',
+    overflow: 'hidden',
+    backgroundColor: 'rgb(17, 24, 39)',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: '4px',
+    right: '4px',
+    width: '24px',
+    height: '24px',
+    borderRadius: '50%',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    color: 'white',
+    border: 'none',
+    fontSize: '1rem',
+    lineHeight: '1',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadButtons: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '0.75rem',
+  },
+  uploadButton: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '0.25rem',
-  },
-  fileName: {
-    fontSize: '0.875rem',
+    alignItems: 'center',
+    gap: '0.5rem',
+    padding: '1rem',
+    backgroundColor: 'rgb(17, 24, 39)',
+    border: '2px dashed rgb(55, 65, 81)',
+    borderRadius: '0.5rem',
     color: 'rgb(156, 163, 175)',
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    minHeight: '80px',
+    transition: 'all 0.2s',
   },
-  button: {
-    padding: '0.875rem',
+  uploadIcon: {
+    fontSize: '1.5rem',
+  },
+  submitButton: {
+    padding: '1rem',
     backgroundColor: 'rgb(255, 173, 179)',
     color: 'rgb(17, 24, 39)',
     fontSize: '1rem',
     fontWeight: '600',
-    borderRadius: '0.375rem',
+    borderRadius: '0.5rem',
+    border: 'none',
     cursor: 'pointer',
-    transition: 'background-color 0.2s',
-    marginTop: '1rem',
+    minHeight: '56px',
+    marginTop: '0.5rem',
   },
-  buttonDisabled: {
+  submitButtonDisabled: {
     opacity: 0.6,
     cursor: 'not-allowed',
   },
-  successMessage: {
-    padding: '1rem',
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    border: '1px solid rgba(34, 197, 94, 0.3)',
-    borderRadius: '0.375rem',
+  successCard: {
+    textAlign: 'center',
+    padding: '2rem 1rem',
+  },
+  successIcon: {
+    width: '64px',
+    height: '64px',
+    borderRadius: '50%',
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
     color: 'rgb(34, 197, 94)',
+    fontSize: '2rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: '0 auto 1rem',
+  },
+  successTitle: {
+    fontSize: '1.25rem',
+    fontWeight: '600',
+    color: 'rgb(243, 244, 246)',
+    marginBottom: '0.5rem',
+  },
+  successText: {
+    color: 'rgb(156, 163, 175)',
     marginBottom: '1.5rem',
+  },
+  newExpenseButton: {
+    padding: '0.75rem 1.5rem',
+    backgroundColor: 'transparent',
+    border: '1px solid rgb(255, 173, 179)',
+    borderRadius: '0.5rem',
+    color: 'rgb(255, 173, 179)',
+    fontSize: '0.875rem',
+    fontWeight: '500',
+    cursor: 'pointer',
   },
   errorMessage: {
     padding: '1rem',
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     border: '1px solid rgba(239, 68, 68, 0.3)',
-    borderRadius: '0.375rem',
+    borderRadius: '0.5rem',
     color: 'rgb(239, 68, 68)',
-    marginBottom: '1.5rem',
+    marginBottom: '1rem',
+    textAlign: 'center',
   },
 };
 

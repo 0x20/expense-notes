@@ -4,6 +4,11 @@
   box-sizing: border-box;
 }
 
+html {
+  /* Prevent font scaling on rotation */
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
@@ -14,19 +19,38 @@ body {
   color: rgb(243, 244, 246);
   line-height: 1.6;
   min-height: 100vh;
+  /* Prevent pull-to-refresh on mobile */
+  overscroll-behavior-y: contain;
 }
 
 #root {
   min-height: 100vh;
 }
 
+/* Prevent iOS zoom on input focus (requires 16px+ font) */
+input, select, textarea {
+  font-size: 16px;
+}
+
+/* Touch-friendly targets */
+button, input, select, textarea {
+  touch-action: manipulation;
+}
+
 button {
   transition: all 0.2s;
 }
 
-button:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+/* Only apply hover effects on devices with hover capability */
+@media (hover: hover) {
+  button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+}
+
+button:active {
+  transform: scale(0.98);
 }
 
 @media (max-width: 768px) {
