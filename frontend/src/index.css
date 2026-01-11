@@ -53,6 +53,32 @@ button:active {
   transform: scale(0.98);
 }
 
+/* Expense form - full width on mobile, centered card on desktop */
+.expense-form-container {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.expense-form-card {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid rgb(55, 65, 81);
+}
+
+@media (min-width: 640px) {
+  .expense-form-container {
+    padding: 2rem 1rem;
+  }
+
+  .expense-form-card {
+    max-width: 500px;
+    border-radius: 1rem;
+    border: 1px solid rgb(55, 65, 81);
+  }
+}
+
 @media (max-width: 768px) {
   .desktop-grid {
     grid-template-columns: 1fr !important;

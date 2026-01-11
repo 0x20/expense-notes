@@ -65,6 +65,7 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
       await expenseAPI.submitExpense(submitData, accessToken);
 
       setSuccess(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       setFormData({
         member_name: '',
         description: '',
@@ -83,8 +84,8 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
 
   if (!isDevelopment && !accessToken) {
     return (
-      <div style={styles.container}>
-        <div style={styles.card}>
+      <div className="expense-form-container" style={styles.container}>
+        <div className="expense-form-card" style={styles.card}>
           <h1 style={styles.title}>Access Required</h1>
           <div style={styles.errorMessage}>
             Use the <strong>/expenses</strong> command in Mattermost to get your personal submission link.
@@ -95,8 +96,8 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
+    <div className="expense-form-container" style={styles.container}>
+      <div className="expense-form-card" style={styles.card}>
         <h1 style={styles.title}>Submit Expense</h1>
 
         {mattermostUsername && (
@@ -332,18 +333,20 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
 const styles = {
   container: {
     minHeight: '100vh',
-    padding: '1rem',
+    minHeight: '100dvh', // Dynamic viewport height for mobile
+    padding: '0',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'flex-start',
   },
   card: {
     backgroundColor: 'rgb(31, 41, 55)',
-    borderRadius: '1rem',
+    borderRadius: '0',
     padding: '1.5rem',
-    maxWidth: '500px',
     width: '100%',
-    border: '1px solid rgb(55, 65, 81)',
+    maxWidth: '100%',
+    border: 'none',
+    borderBottom: '1px solid rgb(55, 65, 81)',
   },
   title: {
     fontSize: '1.5rem',
