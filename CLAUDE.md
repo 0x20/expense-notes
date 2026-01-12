@@ -83,7 +83,7 @@ Add new migrations to `backend/migrate.py`. The script is idempotent (safe to ru
 ### HSG Bot (hsg-bot/)
 
 Mattermost bot for secure expense link generation and notifications:
-- `/expenses` slash command returns ephemeral link with signed Ed25519 token
+- `/expenses` slash command returns ephemeral link with signed Ed25519 token + sends DM (for mobile users who can't see ephemeral messages)
 - Backend calls `/notify` endpoint to DM users on status changes
 - Modular structure: `commands/` for handlers, `services/` for Mattermost API and token generation
 
@@ -91,6 +91,7 @@ Mattermost bot for secure expense link generation and notifications:
 
 **Component Hierarchy**:
 - `App.jsx` → routes to `ExpenseForm` (public) or `AdminLogin`/`AdminDashboard` (admin)
+- `ExpenseForm` → mobile-first design with camera capture, full-width on mobile
 - `AdminDashboard` → contains `ExpenseList` (1/3 width) + `ExpenseDetails` (2/3 width)
 - `ExpenseDetails` → contains `PhotoGallery` for viewing/deleting photos
 
@@ -99,6 +100,8 @@ Mattermost bot for secure expense link generation and notifications:
 **Auto-upload Pattern**: File selection immediately uploads (no separate upload button). Used in `ExpenseDetails` for adding receipt photos.
 
 **Edit Mode Logic**: Expenses with status != "pending" are locked by default. "Edit" button toggles edit mode for locked expenses. Deleted expenses show standalone "Restore" button outside edit form.
+
+**Code Splitting**: AdminDashboard is lazy-loaded so regular users don't download pdf-lib (520KB). Vendor chunks split: react, pdf-lib, UI libs.
 
 ### API Structure
 
@@ -154,11 +157,6 @@ normalized = filename.replace('photos/photos/', 'photos/')
 
 ### Import Patterns
 
-**jsPDF v4 requires named import**:
-```javascript
-import { jsPDF } from 'jspdf';  // NOT: import jsPDF from 'jspdf'
-```
-
 **Don't inline imports**: Always import at file top (per user preference in ~/.claude/CLAUDE.md)
 
 ### Date Handling
@@ -167,11 +165,13 @@ import { jsPDF } from 'jspdf';  // NOT: import jsPDF from 'jspdf'
 
 **Date filtering**: PDF export filters by date_entered range. Creates one page per expense with full details and embedded images.
 
-**PDF Export Architecture**: Uses pdf-lib (not jsPDF) to generate detailed reports. Each expense gets own page(s) with:
-- Member info and description
-- Admin fields (status, payment details, notes)
+**PDF Export Architecture**: Uses pdf-lib to generate detailed reports. Each expense gets own page(s) with:
+- Cover page with date range, totals summary, and table of contents
+- Member info and description (emojis stripped - WinAnsi font limitation)
+- Admin fields (status, payment details, notes) in two-column layout
 - Receipt photos embedded maintaining aspect ratio
 - PDF attachments: all pages copied into export (merged seamlessly)
+- Footer on each page with expense number and member name
 
 ### Email Notifications
 
@@ -189,7 +189,7 @@ Email service in `backend/app/email_service.py` uses aiosmtplib. Fails silently 
 
 3. **Empty string vs None in DB**: When removing last item from comma-separated field, set to `None` (not `""`). Empty string causes UI issues.
 
-4. **PDF export**: jsPDF import must be named. Dialog needs `e.stopPropagation()` on content div to prevent closing when interacting with date pickers.
+4. **PDF export**: Emojis must be stripped (pdf-lib uses WinAnsi encoding). Dialog needs `e.stopPropagation()` on content div to prevent closing when interacting with date pickers.
 
 5. **File upload accepts**: Both images and PDFs. Backend validates against `ALLOWED_EXTENSIONS` config (default: jpg,jpeg,png,pdf).
 

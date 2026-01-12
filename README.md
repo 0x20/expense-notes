@@ -4,12 +4,12 @@ Expense claim system for 0x20 hackerspace. Members submit expenses via Mattermos
 
 ## Features
 
-- **Mattermost Integration**: `/expenses` command generates secure submission link
-- **Expense Submission**: Upload receipts (images/PDFs), add description, sign digitally
+- **Mattermost Integration**: `/expenses` command generates secure submission link (+ DM for mobile)
+- **Expense Submission**: Mobile-first form with camera capture, receipt upload (images/PDFs)
 - **Admin Dashboard**: Review, approve/deny, track payments
 - **PDF Export**: Generate reports with cover page, summaries, and embedded attachments
 - **Email Notifications**: Notify admins on submission, notify members on status change
-- **Dark Theme**: Modern, mobile-friendly interface
+- **Dark Theme**: Modern, mobile-optimized interface
 
 ## Quick Start
 
@@ -81,11 +81,11 @@ BOT_NOTIFY_SECRET=shared-secret
 
 ### For Members
 
-1. Type `/expenses` in Mattermost
-2. Click the private link (valid for your user only)
-3. Fill in expense details, upload receipt photos
-4. Sign and submit
-5. Receive DM when expense is processed
+1. Type `/expenses` in Mattermost (link also sent as DM for mobile users)
+2. Click the link to open the mobile-friendly form
+3. Choose payment method (bank transfer, cash, or bar tab)
+4. Add amount, description, and receipt photos (camera or upload)
+5. Submit — you'll get a DM when it's processed
 
 ### For Admins
 
@@ -144,7 +144,7 @@ python -c "from app.database import init_db; init_db()"
 
 - **Frontend**: React 18, Vite, pdf-lib, react-datepicker
 - **Backend**: FastAPI, SQLAlchemy, python-jose
-- **Bot**: Flask, Ed25519 signing
+- **Bot**: FastAPI, Ed25519 signing
 - **Database**: SQLite
 
 ## Project Structure
@@ -177,7 +177,7 @@ expense-notes/
 │       │   └── PhotoGallery.jsx
 │       └── services/api.js
 ├── hsg-bot/
-│   ├── app.py                # Flask bot
+│   ├── main.py               # FastAPI bot
 │   ├── commands/             # Slash command handlers
 │   └── services/             # Mattermost API, token signing
 ├── docker-compose.yml
