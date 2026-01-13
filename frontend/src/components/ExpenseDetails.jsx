@@ -383,12 +383,13 @@ const ExpenseDetails = ({ expense, onUpdate }) => {
               </div>
 
               <div style={styles.formGroup}>
-                <label style={styles.formLabel}>Admin Notes</label>
+                <label style={styles.formLabel}>Message to User</label>
                 <textarea
                   name="admin_notes"
                   value={formData.admin_notes}
                   onChange={handleInputChange}
                   rows="4"
+                  placeholder="This message will be visible to the user"
                   style={{...styles.input, ...styles.textarea}}
                 />
               </div>
@@ -469,7 +470,7 @@ const ExpenseDetails = ({ expense, onUpdate }) => {
               )}
               {expense.admin_notes && (
                 <div style={styles.field}>
-                  <span style={styles.label}>Admin Notes:</span>
+                  <span style={styles.label}>Message to User:</span>
                   <span style={styles.value}>{expense.admin_notes}</span>
                 </div>
               )}

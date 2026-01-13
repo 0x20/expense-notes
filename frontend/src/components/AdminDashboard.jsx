@@ -283,12 +283,12 @@ const AdminDashboard = ({ onLogout }) => {
             yPos -= lineHeight;
           }
 
-          // Admin notes (full width, wrapped)
+          // Message to user (full width, wrapped)
           if (expense.admin_notes) {
             yPos -= 5;
-            page.drawText('Notes: ', { x: margin, y: yPos, size: 9, font: fontBold, color: gray });
+            page.drawText('Message: ', { x: margin, y: yPos, size: 9, font: fontBold, color: gray });
             const notesLines = wrapText(safe(expense.admin_notes), contentWidth - 40, 9);
-            const notesLabelWidth = font.widthOfTextAtSize('Notes: ', 9);
+            const notesLabelWidth = font.widthOfTextAtSize('Message: ', 9);
             page.drawText(notesLines[0] || '', { x: margin + notesLabelWidth, y: yPos, size: 9, font });
             yPos -= lineHeight;
             for (let k = 1; k < notesLines.length; k++) {

@@ -117,6 +117,13 @@ const ExpenseView = () => {
           </div>
         )}
 
+        {expense.admin_notes && (
+          <div style={styles.messageField}>
+            <span style={styles.label}>Message from Admin</span>
+            <span style={styles.value}>{expense.admin_notes}</span>
+          </div>
+        )}
+
         {expense.photo_paths && (
           <div style={styles.photosSection}>
             <span style={styles.label}>Receipt Photos</span>
@@ -207,6 +214,13 @@ const styles = {
     marginBottom: '1rem',
     padding: '0.75rem',
     backgroundColor: 'rgb(17, 24, 39)',
+    borderRadius: '0.375rem',
+  },
+  messageField: {
+    marginBottom: '1rem',
+    padding: '0.75rem',
+    backgroundColor: 'rgba(255, 173, 179, 0.1)',
+    border: '1px solid rgba(255, 173, 179, 0.3)',
     borderRadius: '0.375rem',
   },
   label: {
