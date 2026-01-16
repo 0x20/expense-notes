@@ -69,11 +69,21 @@ class EmailService:
         member_name: Optional[str],
         status: str,
         amount: float,
-        description: str
+        description: str,
+        admin_notes: Optional[str] = None
     ):
         status_text = "Paid" if status == "paid" else "Denied"
         subject = f"Expense {status_text}: {description[:50]}"
         greeting = f"Hello {member_name}," if member_name else "Hello,"
+
+        admin_notes_html = ""
+        if admin_notes:
+            admin_notes_html = f"""
+                <p style="margin-top: 20px; padding: 12px; background-color: #f5f5f5; border-left: 4px solid rgb(255, 173, 179);">
+                    <strong>Message from Admin:</strong><br/>
+                    {admin_notes}
+                </p>
+            """
 
         html_content = f"""
         <html>
@@ -82,7 +92,7 @@ class EmailService:
                 <p>{greeting}</p>
                 <p>Your expense submission has been <strong>{status.lower()}</strong>.</p>
                 <p><strong>Description:</strong> {description}</p>
-                <p><strong>Amount:</strong> €{amount:.2f}</p>
+                <p><strong>Amount:</strong> €{amount:.2f}</p>{admin_notes_html}
             </body>
         </html>
         """

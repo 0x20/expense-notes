@@ -16,12 +16,31 @@ const ExpenseDetails = ({ expense, onUpdate }) => {
     return 'Other';
   };
 
+  // Get default payment fields based on expense payment method
+  const getDefaultPaidFrom = (exp) => {
+    if (exp.paid_from) return exp.paid_from;
+    if (exp.payment_method === 'bar') return 'Bar';
+    return 'KBC';
+  };
+
+  const getDefaultPaidTo = (exp) => {
+    if (exp.paid_to) return getPaidToType(exp.paid_to);
+    if (exp.payment_method === 'bar') return 'Other';
+    return 'IBAN';
+  };
+
+  const getDefaultPaidToOther = (exp) => {
+    if (exp.paid_to && exp.paid_to !== 'IBAN') return exp.paid_to;
+    if (exp.payment_method === 'bar' && !exp.paid_to) return exp.member_name || '';
+    return '';
+  };
+
   const [formData, setFormData] = useState({
     pay_date: expense.pay_date ? new Date(expense.pay_date) : null,
-    paid_from: expense.paid_from || 'KBC',
+    paid_from: getDefaultPaidFrom(expense),
     paid_from_other: expense.paid_from && !['KBC', 'Cash', 'Bar'].includes(expense.paid_from) ? expense.paid_from : '',
-    paid_to: getPaidToType(expense.paid_to),
-    paid_to_other: expense.paid_to && expense.paid_to !== 'IBAN' ? expense.paid_to : '',
+    paid_to: getDefaultPaidTo(expense),
+    paid_to_other: getDefaultPaidToOther(expense),
     financial_responsible: expense.financial_responsible || '',
     admin_notes: expense.admin_notes || '',
   });
@@ -30,10 +49,10 @@ const ExpenseDetails = ({ expense, onUpdate }) => {
   useEffect(() => {
     setFormData({
       pay_date: expense.pay_date ? new Date(expense.pay_date) : null,
-      paid_from: expense.paid_from || 'KBC',
+      paid_from: getDefaultPaidFrom(expense),
       paid_from_other: expense.paid_from && !['KBC', 'Cash', 'Bar'].includes(expense.paid_from) ? expense.paid_from : '',
-      paid_to: getPaidToType(expense.paid_to),
-      paid_to_other: expense.paid_to && expense.paid_to !== 'IBAN' ? expense.paid_to : '',
+      paid_to: getDefaultPaidTo(expense),
+      paid_to_other: getDefaultPaidToOther(expense),
       financial_responsible: expense.financial_responsible || '',
       admin_notes: expense.admin_notes || '',
     });

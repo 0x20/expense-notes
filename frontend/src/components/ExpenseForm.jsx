@@ -207,6 +207,11 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
                   name="amount"
                   value={formData.amount}
                   onChange={handleInputChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'e' || e.key === 'E') {
+                      e.preventDefault();
+                    }
+                  }}
                   step="0.01"
                   min="0"
                   required

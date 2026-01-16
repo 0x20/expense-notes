@@ -88,7 +88,8 @@ async def update_expense(
                 updated_expense.member_name,
                 updated_expense.status,
                 float(updated_expense.amount),
-                updated_expense.description
+                updated_expense.description,
+                updated_expense.admin_notes
             )
         except Exception as e:
             logger.error(f"Failed to send status update email to {updated_expense.member_email}: {e}")
@@ -100,7 +101,8 @@ async def update_expense(
                     updated_expense.mattermost_username,
                     updated_expense.status,
                     float(updated_expense.amount),
-                    updated_expense.description
+                    updated_expense.description,
+                    updated_expense.admin_notes
                 )
                 if not result:
                     logger.warning(f"DM notification returned false for {updated_expense.mattermost_username}")

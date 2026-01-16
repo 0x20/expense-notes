@@ -48,7 +48,8 @@ async def notify_expense_status_change(
     username: str,
     status: str,
     amount: float,
-    description: str
+    description: str,
+    admin_notes: str = None
 ) -> bool:
     """
     Notify user that their expense status changed.
@@ -65,11 +66,13 @@ async def notify_expense_status_change(
         "pending": "set back to pending"
     }.get(status, status)
 
+    admin_notes_line = f"\n\n:memo: **Message from Admin:**\n> {admin_notes}" if admin_notes else ""
+
     message = f"""{status_emoji} **Expense Update**
 
 Your expense for **€{amount:.2f}** has been **{status_text}**.
 
-> {description[:100]}{"..." if len(description) > 100 else ""}
+> {description[:100]}{"..." if len(description) > 100 else ""}{admin_notes_line}
 
 Use `/expenses` to submit a new expense."""
 

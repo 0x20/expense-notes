@@ -184,6 +184,7 @@ async def view_expense_by_token(
         "photo_paths": expense.photo_paths,
         "created_at": expense.created_at.isoformat() if expense.created_at else None,
         "pay_date": expense.pay_date.isoformat() if expense.pay_date else None,
+        "admin_notes": expense.admin_notes,
     }
 
 @router.get("/view/{view_token}/photo/{filename}")
