@@ -21,9 +21,18 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
   const isDevelopment = import.meta.env.DEV;
 
   const handleInputChange = (e) => {
+    const { name, value } = e.target;
+
+    // Auto-convert comma to period for amount field (European locale support)
+    if (name === 'amount' && e.nativeEvent?.data === ',') {
+      const newValue = formData.amount + '.';
+      setFormData({ ...formData, amount: newValue });
+      return;
+    }
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
   };
 
@@ -259,22 +268,33 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
               {/* Photo previews */}
               {photos.length > 0 && (
                 <div style={styles.photoGrid}>
-                  {photos.map((photo, index) => (
-                    <div key={index} style={styles.photoPreview}>
-                      <img
-                        src={URL.createObjectURL(photo)}
-                        alt={`Receipt ${index + 1}`}
-                        style={styles.previewImage}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removePhoto(index)}
-                        style={styles.removePhotoButton}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+                  {photos.map((photo, index) => {
+                    const isPDF = photo.type === 'application/pdf' || photo.name?.toLowerCase().endsWith('.pdf');
+                    return (
+                      <div key={index} style={styles.photoPreview}>
+                        {isPDF ? (
+                          <div style={styles.pdfPreview}>
+                            <div style={styles.pdfIcon}>📄</div>
+                            <div style={styles.pdfText}>PDF</div>
+                            <div style={styles.pdfFilename}>{photo.name}</div>
+                          </div>
+                        ) : (
+                          <img
+                            src={URL.createObjectURL(photo)}
+                            alt={`Receipt ${index + 1}`}
+                            style={styles.previewImage}
+                          />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(index)}
+                          style={styles.removePhotoButton}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -458,6 +478,37 @@ const styles = {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
+  },
+  pdfPreview: {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgb(17, 24, 39)',
+    border: '2px dashed rgb(255, 173, 179)',
+    borderRadius: '0.375rem',
+    padding: '0.5rem',
+  },
+  pdfIcon: {
+    fontSize: '1.5rem',
+    lineHeight: '1',
+  },
+  pdfText: {
+    fontSize: '0.625rem',
+    color: 'rgb(255, 173, 179)',
+    fontWeight: '600',
+  },
+  pdfFilename: {
+    fontSize: '0.5rem',
+    color: 'rgb(156, 163, 175)',
+    textAlign: 'center',
+    wordBreak: 'break-word',
+    maxWidth: '100%',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   removePhotoButton: {
     position: 'absolute',
