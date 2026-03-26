@@ -179,6 +179,10 @@ const ExpenseDetails = ({ expense, onUpdate }) => {
     }
   };
 
+  const handlePhotoRotate = async (filename, direction) => {
+    await adminAPI.rotatePhoto(expense.id, filename, direction);
+  };
+
   const handleDeleteExpense = async () => {
     try {
       await adminAPI.softDeleteExpense(expense.id);
@@ -266,6 +270,7 @@ const ExpenseDetails = ({ expense, onUpdate }) => {
                 title=""
                 editable={editMode}
                 onDelete={handlePhotoDelete}
+                onRotate={handlePhotoRotate}
               />
 
               {/* Upload button tile */}

@@ -64,6 +64,14 @@ export const adminAPI = {
     return `${API_URL}/api/admin/files/${fileType}/${filename}`;
   },
 
+  rotatePhoto: async (expenseId, filename, direction = 'cw') => {
+    const response = await api.post(
+      `/api/admin/expenses/${expenseId}/photos/${filename}/rotate`,
+      { direction }
+    );
+    return response.data;
+  },
+
   deletePhoto: async (expenseId, filename) => {
     const response = await api.delete(`/api/admin/expenses/${expenseId}/photos/${filename}`);
     return response.data;

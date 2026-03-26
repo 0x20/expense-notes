@@ -28,11 +28,13 @@ const AuthenticatedImage = ({ src, alt, style, onClick, onError }) => {
   return <img src={blobUrl} alt={alt} style={style} onClick={onClick} />;
 };
 
-const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete }) => {
+const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete, onRotate }) => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [lightboxImage, setLightboxImage] = useState(null);
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [rotating, setRotating] = useState(null);
+  const [imageVersions, setImageVersions] = useState({});
   const [imageErrors, setImageErrors] = useState({});
 
   if (!photoPaths) return null;
@@ -66,6 +68,25 @@ const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete
 
   const handleImageError = (index) => {
     setImageErrors(prev => ({ ...prev, [index]: true }));
+  };
+
+  const handleRotate = async (path, index, direction) => {
+    if (rotating !== null || !onRotate) return;
+    setRotating(index);
+    try {
+      await onRotate(path, direction);
+      const newVersion = Date.now();
+      setImageVersions(prev => ({ ...prev, [index]: newVersion }));
+      // Update lightbox URL if open
+      if (lightboxImage && lightboxImage.index === index) {
+        const baseUrl = lightboxImage.url.split('?')[0];
+        setLightboxImage(prev => ({ ...prev, url: `${baseUrl}?v=${newVersion}` }));
+      }
+    } catch (err) {
+      console.error('Rotate failed:', err);
+    } finally {
+      setRotating(null);
+    }
   };
 
   const openPdfWithAuth = async (fileUrl) => {
@@ -109,7 +130,8 @@ const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete
       {title && <h3 style={styles.title}>{title}</h3>}
       {paths.map((path, index) => {
           const trimmedPath = path.trim();
-          const fileUrl = `${apiUrl}/api/admin/files/${trimmedPath}`;
+          const version = imageVersions[index] || '';
+          const fileUrl = `${apiUrl}/api/admin/files/${trimmedPath}${version ? `?v=${version}` : ''}`;
           const isPDF = trimmedPath.toLowerCase().endsWith('.pdf');
 
           return (
@@ -137,7 +159,7 @@ const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete
                   src={fileUrl}
                   alt={`${title} ${index + 1}`}
                   style={styles.image}
-                  onClick={() => setLightboxImage(fileUrl)}
+                  onClick={() => setLightboxImage({ url: fileUrl, path: trimmedPath, index })}
                   onError={() => handleImageError(index)}
                 />
               )}
@@ -152,6 +174,26 @@ const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete
                 >
                   📥
                 </button>
+              )}
+              {editable && onRotate && !isPDF && hoveredIndex === index && (
+                <div style={styles.rotateButtons}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleRotate(trimmedPath, index, 'ccw'); }}
+                    style={{ ...styles.rotateButton, opacity: rotating === index ? 0.5 : 1 }}
+                    title="Rotate left"
+                    disabled={rotating === index}
+                  >
+                    ↺
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleRotate(trimmedPath, index, 'cw'); }}
+                    style={{ ...styles.rotateButton, opacity: rotating === index ? 0.5 : 1 }}
+                    title="Rotate right"
+                    disabled={rotating === index}
+                  >
+                    ↻
+                  </button>
+                </div>
               )}
               {editable && hoveredIndex === index && (
                 <button
@@ -179,11 +221,31 @@ const PhotoGallery = ({ photoPaths, title = "Photos", editable = false, onDelete
               ×
             </button>
             <AuthenticatedImage
-              src={lightboxImage}
+              src={lightboxImage.url}
               alt="Full size"
               style={styles.lightboxImage}
               onClick={(e) => e.stopPropagation()}
             />
+            {onRotate && (
+              <div style={styles.lightboxRotateButtons} onClick={(e) => e.stopPropagation()}>
+                <button
+                  onClick={() => handleRotate(lightboxImage.path, lightboxImage.index, 'ccw')}
+                  style={{ ...styles.lightboxRotateButton, opacity: rotating === lightboxImage.index ? 0.5 : 1 }}
+                  title="Rotate left"
+                  disabled={rotating === lightboxImage.index}
+                >
+                  ↺
+                </button>
+                <button
+                  onClick={() => handleRotate(lightboxImage.path, lightboxImage.index, 'cw')}
+                  style={{ ...styles.lightboxRotateButton, opacity: rotating === lightboxImage.index ? 0.5 : 1 }}
+                  title="Rotate right"
+                  disabled={rotating === lightboxImage.index}
+                >
+                  ↻
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -282,6 +344,29 @@ const styles = {
     fontWeight: '600',
     transition: 'all 0.2s',
   },
+  rotateButtons: {
+    position: 'absolute',
+    bottom: '0.5rem',
+    left: '0.5rem',
+    display: 'flex',
+    gap: '0.25rem',
+  },
+  rotateButton: {
+    width: '2rem',
+    height: '2rem',
+    borderRadius: '50%',
+    backgroundColor: 'rgba(255, 173, 179, 0.95)',
+    color: 'rgb(17, 24, 39)',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '1.25rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: '1',
+    fontWeight: '600',
+    transition: 'all 0.2s',
+  },
   downloadButton: {
     position: 'absolute',
     bottom: '0.5rem',
@@ -327,6 +412,30 @@ const styles = {
     maxHeight: '95vh',
     objectFit: 'contain',
     cursor: 'default',
+  },
+  lightboxRotateButtons: {
+    position: 'absolute',
+    bottom: '-3.5rem',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    display: 'flex',
+    gap: '0.5rem',
+  },
+  lightboxRotateButton: {
+    width: '3rem',
+    height: '3rem',
+    borderRadius: '50%',
+    backgroundColor: 'rgba(255, 173, 179, 0.95)',
+    color: 'rgb(17, 24, 39)',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '1.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: '1',
+    fontWeight: '600',
+    transition: 'all 0.2s',
   },
   lightboxClose: {
     position: 'absolute',

@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import timedelta
+from PIL import Image
 import os
 import logging
 
@@ -143,6 +145,42 @@ async def upload_admin_attachments(
     )
 
     return {"attachment_paths": attachment_paths, "new_files": new_paths}
+
+class RotateRequest(BaseModel):
+    direction: str  # "cw" or "ccw"
+
+@router.post("/expenses/{expense_id}/photos/{filename:path}/rotate")
+async def rotate_photo(
+    expense_id: str,
+    filename: str,
+    body: RotateRequest,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    """Rotate a photo 90 degrees clockwise or counter-clockwise (admin only)"""
+    expense = get_expense_note(db, expense_id)
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+
+    normalized = filename.replace('photos/photos/', 'photos/').replace('attachments/attachments/', 'attachments/')
+    file_path = os.path.join(settings.UPLOAD_DIR, normalized)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    if normalized.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Cannot rotate PDF files")
+
+    angle = -90 if body.direction == "cw" else 90
+    try:
+        with Image.open(file_path) as img:
+            rotated = img.rotate(angle, expand=True)
+            rotated.save(file_path)
+    except Exception as e:
+        logger.error(f"Failed to rotate image {file_path}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to rotate image")
+
+    return {"message": "Photo rotated successfully"}
 
 @router.delete("/expenses/{expense_id}/photos/{filename:path}")
 async def delete_photo(
