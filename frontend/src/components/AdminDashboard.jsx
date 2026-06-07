@@ -166,22 +166,25 @@ const AdminDashboard = ({ onLogout }) => {
       const gray = rgb(0.4, 0.4, 0.4);
       const black = rgb(0, 0, 0);
 
-      // Helper: wrap text to fit width
+      // Helper: wrap text to fit width, preserving explicit line breaks (\n)
       const wrapText = (text, maxWidth, fontSize) => {
-        const words = text.split(' ');
         const lines = [];
-        let currentLine = '';
-        for (const word of words) {
-          const testLine = currentLine ? `${currentLine} ${word}` : word;
-          const testWidth = font.widthOfTextAtSize(testLine, fontSize);
-          if (testWidth > maxWidth && currentLine) {
-            lines.push(currentLine);
-            currentLine = word;
-          } else {
-            currentLine = testLine;
+        for (const paragraph of String(text).split('\n')) {
+          const words = paragraph.split(' ');
+          let currentLine = '';
+          for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+            if (testWidth > maxWidth && currentLine) {
+              lines.push(currentLine);
+              currentLine = word;
+            } else {
+              currentLine = testLine;
+            }
           }
+          // Push even when empty so blank lines between paragraphs are kept
+          lines.push(currentLine);
         }
-        if (currentLine) lines.push(currentLine);
         return lines;
       };
 
@@ -193,13 +196,17 @@ const AdminDashboard = ({ onLogout }) => {
         0x0160, 0x2039, 0x0152, 0x017D, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022,
         0x2013, 0x2014, 0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x017E, 0x0178,
       ]);
-      const safe = (val) => {
+      // multiline=true keeps newlines (for wrapText'd fields like description);
+      // otherwise newlines collapse to spaces so single-line fields stay on one row.
+      const safe = (val, multiline = false) => {
         if (!val) return '';
-        return Array.from(String(val))
+        // Normalize CRLF/CR to LF first so \r never reaches drawText
+        const normalized = String(val).replace(/\r\n?/g, '\n');
+        return Array.from(normalized)
           .map((ch) => {
             const cp = ch.codePointAt(0);
-            // Line breaks/tabs can't be drawn — turn into spaces (wrapText re-wraps)
-            if (cp === 0x09 || cp === 0x0A || cp === 0x0D) return ' ';
+            if (cp === 0x0A) return multiline ? '\n' : ' ';
+            if (cp === 0x09) return ' '; // tab → space
             // Drop control chars (C0, DEL, C1) and anything WinAnsi can't encode
             if (cp < 0x20 || (cp >= 0x7F && cp <= 0x9F)) return '';
             return cp <= 0xFF || winAnsiExtras.has(cp) ? ch : '';
@@ -313,7 +320,7 @@ const AdminDashboard = ({ onLogout }) => {
         yPos -= 20;
 
         // Description with wrapping
-        const descLines = wrapText(safe(expense.description), contentWidth, 10);
+        const descLines = wrapText(safe(expense.description, true), contentWidth, 10);
         for (const line of descLines) {
           page.drawText(line, { x: margin, y: yPos, size: 10, font });
           yPos -= lineHeight;
@@ -357,7 +364,7 @@ const AdminDashboard = ({ onLogout }) => {
           if (expense.admin_notes) {
             yPos -= 5;
             page.drawText('Message: ', { x: margin, y: yPos, size: 9, font: fontBold, color: gray });
-            const notesLines = wrapText(safe(expense.admin_notes), contentWidth - 40, 9);
+            const notesLines = wrapText(safe(expense.admin_notes, true), contentWidth - 40, 9);
             const notesLabelWidth = font.widthOfTextAtSize('Message: ', 9);
             page.drawText(notesLines[0] || '', { x: margin + notesLabelWidth, y: yPos, size: 9, font });
             yPos -= lineHeight;
