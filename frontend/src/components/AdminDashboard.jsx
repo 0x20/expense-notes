@@ -82,13 +82,14 @@ const AdminDashboard = ({ onLogout }) => {
     }
   };
 
-  const handleExportPDF = async () => {
+  // Filter expenses by the export dialog's date range and selected statuses.
+  // Returns null (after alerting) if the selection is invalid or empty.
+  const getExportExpenses = () => {
     if (!startDate || !endDate) {
       alert('Please select both start and end dates');
-      return;
+      return null;
     }
 
-    // Filter expenses by date range and status
     const selectedStatuses = Object.keys(exportStatuses).filter(status => exportStatuses[status]);
     const filteredExpenses = expenses.filter(expense => {
       const expenseDate = new Date(expense.date_entered);
@@ -99,8 +100,58 @@ const AdminDashboard = ({ onLogout }) => {
 
     if (filteredExpenses.length === 0) {
       alert('No expenses found in the selected date range with selected statuses');
-      return;
+      return null;
     }
+
+    return filteredExpenses;
+  };
+
+  const handleExportCSV = () => {
+    const filteredExpenses = getExportExpenses();
+    if (!filteredExpenses) return;
+
+    const columns = [
+      { label: 'Date Entered', value: (e) => e.date_entered ? format(new Date(e.date_entered), 'yyyy-MM-dd') : '' },
+      { label: 'Member Name', value: (e) => e.member_name },
+      { label: 'Email', value: (e) => e.member_email },
+      { label: 'Mattermost', value: (e) => e.mattermost_username },
+      { label: 'Description', value: (e) => e.description },
+      { label: 'Amount (EUR)', value: (e) => e.amount != null ? parseFloat(e.amount).toFixed(2) : '' },
+      { label: 'Status', value: (e) => e.status },
+      { label: 'Payment Method', value: (e) => e.payment_method },
+      { label: 'IBAN', value: (e) => e.iban },
+      { label: 'Pay Date', value: (e) => e.pay_date ? format(new Date(e.pay_date), 'yyyy-MM-dd') : '' },
+      { label: 'Paid From', value: (e) => e.paid_from },
+      { label: 'Paid To', value: (e) => e.paid_to },
+      { label: 'Financial Responsible', value: (e) => e.financial_responsible },
+      { label: 'Message to User', value: (e) => e.admin_notes },
+    ];
+
+    const escapeCsv = (val) => {
+      const str = val == null ? '' : String(val);
+      return /[",\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+    };
+
+    const header = columns.map(c => escapeCsv(c.label)).join(',');
+    const rows = filteredExpenses.map(e => columns.map(c => escapeCsv(c.value(e))).join(','));
+    // Prepend BOM so Excel detects UTF-8 (accented names, € symbol)
+    const csv = '﻿' + [header, ...rows].join('\r\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `expense-report-${format(startDate, 'yyyy-MM-dd')}-to-${format(endDate, 'yyyy-MM-dd')}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+
+    setShowExportDialog(false);
+    setStartDate(null);
+    setEndDate(null);
+  };
+
+  const handleExportPDF = async () => {
+    const filteredExpenses = getExportExpenses();
+    if (!filteredExpenses) return;
 
     try {
       const pdfDoc = await PDFDocument.create();
@@ -331,7 +382,7 @@ const AdminDashboard = ({ onLogout }) => {
                   const copiedPages = await pdfDoc.copyPages(attachedPdf, attachedPdf.getPageIndices());
 
                   // Note on current page about the PDF
-                  page.drawText(`📄 ${fileName} (${copiedPages.length} page${copiedPages.length > 1 ? 's' : ''} follow)`, {
+                  page.drawText(`PDF: ${safe(fileName)} (${copiedPages.length} page${copiedPages.length > 1 ? 's' : ''} follow)`, {
                     x: margin + 5, y: yPos, size: 9, font, color: gray
                   });
                   yPos -= lineHeight;
@@ -342,7 +393,7 @@ const AdminDashboard = ({ onLogout }) => {
                   });
                 } catch (pdfError) {
                   console.error('Failed to merge PDF:', pdfError);
-                  page.drawText(`📄 ${fileName} (merge failed)`, { x: margin + 5, y: yPos, size: 9, font, color: rgb(0.8, 0.2, 0.2) });
+                  page.drawText(`PDF: ${safe(fileName)} (merge failed)`, { x: margin + 5, y: yPos, size: 9, font, color: rgb(0.8, 0.2, 0.2) });
                   yPos -= lineHeight;
                 }
               }
@@ -386,7 +437,7 @@ const AdminDashboard = ({ onLogout }) => {
                   yPos -= imgHeight + 10;
                 } catch (imgError) {
                   console.error('Failed to embed image:', imgError);
-                  page.drawText(`🖼 ${fileName} (embed failed)`, { x: margin + 5, y: yPos, size: 9, font, color: rgb(0.8, 0.2, 0.2) });
+                  page.drawText(`Image: ${safe(fileName)} (embed failed)`, { x: margin + 5, y: yPos, size: 9, font, color: rgb(0.8, 0.2, 0.2) });
                   yPos -= lineHeight;
                 }
               }
@@ -434,7 +485,7 @@ const AdminDashboard = ({ onLogout }) => {
         </div>
         <div style={styles.actions}>
           <button onClick={() => setShowExportDialog(true)} style={styles.exportButton}>
-            Export PDF
+            Export
           </button>
           <button onClick={onLogout} style={styles.logoutButton}>
             Logout
@@ -445,7 +496,7 @@ const AdminDashboard = ({ onLogout }) => {
       {showExportDialog && (
         <div style={styles.exportDialog} onClick={() => setShowExportDialog(false)}>
           <div style={styles.exportDialogContent} onClick={(e) => e.stopPropagation()}>
-            <h3 style={styles.exportTitle}>Export Expenses to PDF</h3>
+            <h3 style={styles.exportTitle}>Export Expenses</h3>
             <div style={styles.dateRangePicker}>
               <div style={styles.datePickerGroup}>
                 <label style={styles.dateLabel}>Start Date</label>
@@ -507,6 +558,9 @@ const AdminDashboard = ({ onLogout }) => {
             <div style={styles.exportActions}>
               <button type="button" onClick={handleExportPDF} style={styles.exportConfirmButton}>
                 Generate PDF
+              </button>
+              <button type="button" onClick={handleExportCSV} style={styles.exportConfirmButton}>
+                Generate CSV
               </button>
               <button type="button" onClick={() => setShowExportDialog(false)} style={styles.exportCancelButton}>
                 Cancel
