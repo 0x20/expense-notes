@@ -127,13 +127,17 @@ const AdminDashboard = ({ onLogout }) => {
       { label: 'Message to User', value: (e) => e.admin_notes },
     ];
 
-    const escapeCsv = (val) => {
+    const DELIMITER = ';';
+
+    // Sanitize the delimiter and newlines out of each cell so fields can't
+    // break the column structure and every record stays on one line.
+    const cell = (val) => {
       const str = val == null ? '' : String(val);
-      return /[",\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+      return str.replace(/;/g, ',').replace(/[\r\n]+/g, ' ').trim();
     };
 
-    const header = columns.map(c => escapeCsv(c.label)).join(',');
-    const rows = filteredExpenses.map(e => columns.map(c => escapeCsv(c.value(e))).join(','));
+    const header = columns.map(c => cell(c.label)).join(DELIMITER);
+    const rows = filteredExpenses.map(e => columns.map(c => cell(c.value(e))).join(DELIMITER));
     // Prepend BOM so Excel detects UTF-8 (accented names, € symbol)
     const csv = '﻿' + [header, ...rows].join('\r\n');
 
@@ -181,11 +185,22 @@ const AdminDashboard = ({ onLogout }) => {
         return lines;
       };
 
-      // Helper: safe string (prevent null errors and strip emojis/unsupported chars)
+      // Helper: safe string (prevent null errors and strip chars pdf-lib's
+      // WinAnsi font cannot encode — emojis, CJK, etc.). Keep Latin-1 plus the
+      // CP1252 "extra" code points above 0xFF (€, curly quotes, dashes, ™, …).
+      const winAnsiExtras = new Set([
+        0x20AC, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021, 0x02C6, 0x2030,
+        0x0160, 0x2039, 0x0152, 0x017D, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022,
+        0x2013, 0x2014, 0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x017E, 0x0178,
+      ]);
       const safe = (val) => {
         if (!val) return '';
-        // Remove emojis and other non-WinAnsi characters (pdf-lib limitation)
-        return String(val).replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/gu, '');
+        return Array.from(String(val))
+          .filter((ch) => {
+            const cp = ch.codePointAt(0);
+            return cp <= 0xFF || winAnsiExtras.has(cp);
+          })
+          .join('');
       };
 
       // Helper: draw page footer
