@@ -196,9 +196,13 @@ const AdminDashboard = ({ onLogout }) => {
       const safe = (val) => {
         if (!val) return '';
         return Array.from(String(val))
-          .filter((ch) => {
+          .map((ch) => {
             const cp = ch.codePointAt(0);
-            return cp <= 0xFF || winAnsiExtras.has(cp);
+            // Line breaks/tabs can't be drawn — turn into spaces (wrapText re-wraps)
+            if (cp === 0x09 || cp === 0x0A || cp === 0x0D) return ' ';
+            // Drop control chars (C0, DEL, C1) and anything WinAnsi can't encode
+            if (cp < 0x20 || (cp >= 0x7F && cp <= 0x9F)) return '';
+            return cp <= 0xFF || winAnsiExtras.has(cp) ? ch : '';
           })
           .join('');
       };
