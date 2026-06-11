@@ -131,10 +131,12 @@ const AdminDashboard = ({ onLogout }) => {
     const DELIMITER = ';';
 
     // Sanitize the delimiter and newlines out of each cell so fields can't
-    // break the column structure and every record stays on one line.
+    // break the column structure and every record stays on one line. A leading
+    // =, +, -, @ would be evaluated as a formula by Excel/Sheets when the file
+    // is opened, so prefix those values with an apostrophe to force text.
     const cell = (val) => {
-      const str = val == null ? '' : String(val);
-      return str.replace(/;/g, ',').replace(/[\r\n]+/g, ' ').trim();
+      const str = (val == null ? '' : String(val)).replace(/;/g, ',').replace(/[\r\n]+/g, ' ').trim();
+      return /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
     };
 
     const header = columns.map(c => cell(c.label)).join(DELIMITER);
