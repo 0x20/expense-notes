@@ -82,9 +82,10 @@ const ExpenseDetails = ({ expense, onUpdate }) => {
   const validateAndPrepareData = () => {
     const submitData = { ...formData };
 
-    // Convert Date object to ISO string for pay_date
+    // pay_date is a calendar date, not a timestamp — toISOString() would shift
+    // local midnight to the previous day in UTC
     if (submitData.pay_date) {
-      submitData.pay_date = submitData.pay_date.toISOString();
+      submitData.pay_date = format(submitData.pay_date, 'yyyy-MM-dd');
     }
 
     // Validate "Other" option for paid_from
