@@ -4,6 +4,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { format } from 'date-fns';
 import { adminAPI } from '../services/api';
+import { paymentMethodLabel } from '../constants/paymentMethods';
 import ExpenseList from './ExpenseList';
 import ExpenseDetails from './ExpenseDetails';
 
@@ -118,7 +119,7 @@ const AdminDashboard = ({ onLogout }) => {
       { label: 'Description', value: (e) => e.description },
       { label: 'Amount (EUR)', value: (e) => e.amount != null ? parseFloat(e.amount).toFixed(2) : '' },
       { label: 'Status', value: (e) => e.status },
-      { label: 'Payment Method', value: (e) => e.payment_method },
+      { label: 'Payment Method', value: (e) => paymentMethodLabel(e.payment_method) },
       { label: 'IBAN', value: (e) => e.iban },
       { label: 'Pay Date', value: (e) => e.pay_date ? format(new Date(e.pay_date), 'yyyy-MM-dd') : '' },
       { label: 'Paid From', value: (e) => e.paid_from },

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { paymentMethodLabel } from '../constants/paymentMethods';
 
 const ExpenseView = () => {
   const { token } = useParams();
@@ -102,7 +103,7 @@ const ExpenseView = () => {
 
         <div style={styles.field}>
           <span style={styles.label}>Payment Method</span>
-          <span style={styles.value}>{expense.payment_method === 'cash' ? 'Cash' : 'Bank Transfer (IBAN)'}</span>
+          <span style={styles.value}>{paymentMethodLabel(expense.payment_method)}</span>
         </div>
 
         <div style={styles.field}>

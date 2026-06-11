@@ -4,6 +4,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import PhotoGallery from './PhotoGallery';
 import { adminAPI } from '../services/api';
+import { paymentMethodLabel } from '../constants/paymentMethods';
 
 const ExpenseDetails = ({ expense, onUpdate }) => {
   // Auto-enable edit mode if status is pending
@@ -243,7 +244,7 @@ const ExpenseDetails = ({ expense, onUpdate }) => {
             <div style={styles.infoItem}>
               <span style={styles.infoLabel}>Payment Method:</span>
               <span style={styles.infoValue}>
-                {expense.payment_method === 'iban' ? 'IBAN / Bank Transfer' : expense.payment_method === 'cash' ? 'Cash' : expense.payment_method === 'bar' ? 'Bar Tab' : expense.payment_method || '-'}
+                {paymentMethodLabel(expense.payment_method)}
               </span>
             </div>
             {expense.payment_method === 'iban' && expense.iban && (

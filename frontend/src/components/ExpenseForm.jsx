@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { expenseAPI } from '../services/api';
+import { PAYMENT_METHODS } from '../constants/paymentMethods';
 
 const ExpenseForm = ({ accessToken, mattermostUsername }) => {
   const [formData, setFormData] = useState({
@@ -139,11 +140,7 @@ const ExpenseForm = ({ accessToken, mattermostUsername }) => {
             <div style={styles.formGroup}>
               <label style={styles.label}>Payment Method</label>
               <div style={styles.segmentedControl}>
-                {[
-                  { value: 'iban', label: 'Bank Transfer' },
-                  { value: 'cash', label: 'Cash' },
-                  { value: 'bar', label: 'Bar Tab' }
-                ].map(option => (
+                {PAYMENT_METHODS.map(option => (
                   <button
                     key={option.value}
                     type="button"
