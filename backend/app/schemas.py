@@ -28,6 +28,18 @@ class ExpenseNoteUpdate(BaseModel):
     attachment_paths: Optional[str] = None
     admin_notes: Optional[str] = None
 
+    @field_validator('pay_date', mode='before')
+    @classmethod
+    def parse_pay_date(cls, v):
+        # Frontend sends pay_date as a calendar date ('yyyy-MM-dd') to avoid a
+        # UTC day shift. pydantic's datetime type rejects a date-only string, so
+        # parse it to local midnight here. Treat empty string as no date.
+        if v is None or (isinstance(v, str) and v.strip() == ''):
+            return None
+        if isinstance(v, str) and len(v.strip()) == 10:
+            return datetime.strptime(v.strip(), '%Y-%m-%d')
+        return v
+
 class ExpenseNoteResponse(BaseModel):
     id: str
     status: str
